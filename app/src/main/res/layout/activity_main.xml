@@ -1,0 +1,74 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:background="@android:color/holo_blue_dark"
+    tools:context="pl.rcponline.nfc.WelcomeActivity"
+    >
+
+    <ImageView
+        android:id="@+id/im_synchronized_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:src="@drawable/ic_action_refresh"
+        />
+
+    <LinearLayout
+        android:id="@+id/ll_datatime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:orientation="vertical"
+        >
+        <TextView
+            android:id="@+id/tv_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="@dimen/welcome_timer"
+            tools:text="12:30"
+            />
+        <!--<TextClock-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:textStyle="bold"-->
+            <!--android:textSize="@dimen/welcome_timer"-->
+            <!--/>-->
+        <!--<DigitalClock-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:textColor="@android:color/black"-->
+            <!--android:textStyle="bold"-->
+
+            <!--android:textSize="@dimen/welcome_timer"-->
+            <!--/>-->
+        <TextView
+            android:id="@+id/tv_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textSize="@dimen/welcome_date"
+            android:layout_gravity="center_horizontal"
+            android:textColor="@android:color/background_light"
+            tools:text="12.02.2015"
+            />
+
+    </LinearLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/put_your_card"
+        android:textSize="@dimen/welcome_put_your_card"
+        android:layout_marginTop="@dimen/welcome_put_your_card_magin_top"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="20dp"
+        android:textColor="@android:color/white"
+        />
+
+</RelativeLayout>

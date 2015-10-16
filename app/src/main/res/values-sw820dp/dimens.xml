@@ -1,0 +1,37 @@
+<resources>
+    <!-- Example customization of dimensions originally defined in res/values/dimens.xml
+         (such as screen margins) for screens with more than 820dp of available width. This
+         would include 7" and 10" devices in landscape (~960dp and ~1280dp respectively). -->
+    <dimen name="welcome_timer">18sp</dimen>
+    <dimen name="welcome_date">62sp</dimen>
+    <dimen name="welcome_put_your_card">62sp</dimen>
+    <dimen name="welcome_put_your_card_magin_top">180dp</dimen>
+
+    <dimen name="login_input_padding">14dp</dimen>
+    <dimen name="box_name_last_events">8dp</dimen>
+
+    <dimen name="activity_event_ll_datatime_layout_margin_bottom">0dp</dimen>
+    <dimen name="activity_event_ll_datatime_padding_bottom">10dp</dimen>
+    <dimen name="activity_event_ll_datatime_paddint_top">10dp</dimen>
+
+    <dimen name="activity_event_tv_time">60sp</dimen>
+
+    <dimen name="activity_event_et_event_comment">44sp</dimen>
+    <dimen name="activity_event_tv_last_events">36sp</dimen>
+
+    <dimen name="list_identificators_tv_list_ids_employee_name">36sp</dimen><!--bylo 20sp-->
+    <dimen name="list_identificators_tv_list_ids_desc">28sp</dimen><!--bylo 15sp-->
+    <dimen name="list_identificators_tv_list_ids_number">28sp</dimen>
+
+    <dimen name="list_events_tv_list_events">28sp</dimen>
+
+    <dimen name="activity_login_button">36sp</dimen>
+    <dimen name="activity_login_input_text_size">36sp</dimen>
+    <dimen name="activity_login_button_marginTop">40dp</dimen>
+
+    <dimen name="styles_login_input_padding">14dp</dimen>
+    <dimen name="styles_login_input_marginTop">14dp</dimen>
+
+    <dimen name="activity_horizontal_margin">64dp</dimen>
+
+</resources>

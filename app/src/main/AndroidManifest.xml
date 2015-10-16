@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="pl.rcponline.nfc"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-feature
+        android:name="android.hardware.nfc"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="sensorPortrait" >
+
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
+
+        </activity>
+
+        <activity
+            android:name=".EventActivity"
+            android:configChanges="orientation"
+            android:label="@string/app_name"
+            android:parentActivityName=".MainActivity"
+            android:screenOrientation="sensorPortrait" >
+
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="pl.rcponline.nfc.MainActivity" />
+
+        </activity>
+
+        <activity
+            android:name=".LoginActivity"
+            android:configChanges="orientation"
+            android:label="@string/app_name"
+            android:screenOrientation="sensorPortrait" >
+        </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:configChanges="orientation"
+            android:label="@string/settings"
+            android:parentActivityName=".EventActivity"
+            android:screenOrientation="sensorPortrait" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="pl.rcponline.nfc.MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".EmployeeActivity"
+            android:label="@string/title_activity_employee"
+            android:parentActivityName=".EventActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="pl.rcponline.nfc.EventActivity" />
+        </activity>
+
+        <receiver android:name=".OnlineListener" >
+            <intent-filter>
+                <action android:name="android.net.wifi.STATE_CHANGE" />
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+            </intent-filter>
+        </receiver>
+
+
+    </application>
+
+</manifest>

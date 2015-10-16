@@ -1,0 +1,35 @@
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+
+    <dimen name="welcome_timer">74sp</dimen>
+    <dimen name="welcome_date">26sp</dimen>
+    <dimen name="welcome_put_your_card">26sp</dimen>
+    <dimen name="welcome_put_your_card_magin_top">80dp</dimen>
+
+    <dimen name="login_input_padding">7dp</dimen>
+    <dimen name="box_name_last_events">4dp</dimen>
+
+    <dimen name="activity_event_ll_datatime_layout_margin_bottom">0dp</dimen>
+    <dimen name="activity_event_ll_datatime_padding_bottom">5dp</dimen>
+    <dimen name="activity_event_ll_datatime_paddint_top">5dp</dimen>
+
+    <dimen name="activity_event_tv_time">36dp</dimen>
+
+    <dimen name="activity_event_et_event_comment">22sp</dimen>
+    <dimen name="activity_event_tv_last_events">18sp</dimen>
+
+    <dimen name="list_identificators_tv_list_ids_employee_name">18sp</dimen><!--bylo 20sp-->
+    <dimen name="list_identificators_tv_list_ids_desc">14sp</dimen><!--bylo 15sp-->
+    <dimen name="list_identificators_tv_list_ids_number">14sp</dimen>
+
+    <dimen name="list_events_tv_list_events">14sp</dimen>
+
+    <dimen name="activity_login_button">18sp</dimen>
+    <dimen name="activity_login_input_text_size">18sp</dimen>
+    <dimen name="activity_login_button_marginTop">20dp</dimen>
+
+    <dimen name="styles_login_input_padding">7dp</dimen>
+    <dimen name="styles_login_input_marginTop">7dp</dimen>
+</resources>

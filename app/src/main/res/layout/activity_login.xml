@@ -1,0 +1,61 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/login_background_gradient"
+    tools:context="pl.rcponline.api.LoginActivity">
+
+    <RelativeLayout
+        android:id="@+id/rl_inputs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="30dp"
+        android:layout_marginRight="30dp"
+        >
+
+        <TextView
+            android:id="@+id/tv_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RCPonline.pl"
+            android:textStyle="bold"
+            android:textSize="32sp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="40dp"
+            android:layout_marginTop="40dp" />
+        <EditText
+            android:id="@+id/et_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/tv_info"
+            android:background="@drawable/input"
+            style="@style/LoginInput"
+            android:hint="@string/login_login" />
+
+        <EditText
+            android:id="@+id/et_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/et_log"
+            android:inputType="textPassword"
+            style="@style/LoginInput"
+            android:background="@drawable/input"
+            android:hint="@string/login_password" />
+
+        <Button
+            android:id="@+id/bt_sign_up"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/et_password"
+            android:layout_marginTop="@dimen/activity_login_button_marginTop"
+            android:background="@drawable/login_button"
+            android:hint="Zaloguj"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:textSize="@dimen/activity_login_button"
+            android:onClick="signUp" />
+    </RelativeLayout>
+
+
+
+</RelativeLayout>

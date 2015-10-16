@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_background_events"
+    android:padding="10dp"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/iv_list_employee_icon"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_grade_black_18dp"
+            android:layout_marginRight="5dp"
+            />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Small Text"
+                android:id="@+id/tv_list_employee_name" />
+        </LinearLayout>
+        <TextView
+            android:id="@+id/tv_list_employee_desc"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="@string/app_name"
+            android:gravity="right" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_list_employee_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:layout_marginTop="2dp"
+        android:text="Small Text"
+         />
+
+
+
+    <View
+        android:id="@+id/list_events_sepator"
+        android:layout_marginTop="6dp"
+        android:layout_width="fill_parent"
+        android:layout_height="0.2dp"
+        android:background="#DCDFE3"
+        android:visibility="visible"
+
+       />
+</LinearLayout>
