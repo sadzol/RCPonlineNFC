@@ -33,6 +33,23 @@ import com.androidquery.callback.AjaxStatus;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import android.location.Location;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResult;
+import com.google.android.gms.location.LocationSettingsStates;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+
 import org.json.JSONObject;
 
 import java.lang.reflect.Type;
@@ -47,11 +64,11 @@ import pl.rcponline.nfc.dao.DAO;
 import pl.rcponline.nfc.dao.EventDAO;
 import pl.rcponline.nfc.model.Event;
 
-public class EventActivity extends Activity implements View.OnClickListener {
+public class EventActivity extends Activity implements View.OnClickListener ,ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
 
     private static final String TAG = "EVENT_ACTIVITY";
     AQuery aq;
-    String  comment, data;
+    String  comment, data, location;
     int isEventSend, typeId,lastEvenTypeId;
     View lasViewEvent;
     EditText etComment;
@@ -66,6 +83,21 @@ public class EventActivity extends Activity implements View.OnClickListener {
     ImageButton btStart, btFinish, btBreakStart, btBreakFinish, btTempStart, btTempFinish;
     ImageView imSynchro,ivStartOff,ivFinishOff,ivBreakOff,ivTempOff;
     LinearLayout llDatatime;
+
+    ///////////////LOCATION///////////////////////////////////////////////////////
+    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
+    private final static int REQUEST_CHECK_SETTINGS = 1001;
+    private Location mLastLocation;
+
+    // Google client to interact with Google API
+    private GoogleApiClient mGoogleApiClient;
+    private LocationRequest mLocationRequest;
+
+    // Location updates intervals in sec
+    private static int UPDATE_INTERVAL = 1000; // 1 sec
+    private static int FATEST_INTERVAL = 1000; // 1 sec
+    private static int DISPLACEMENT = 1; // 1 meters
+    ////////////////////////////////////////////////////////////////////////////////
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,7 +123,19 @@ public class EventActivity extends Activity implements View.OnClickListener {
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         context = this;
 
-        //Zegar w czasie rzeczywistym
+        ///////////LOC///////// First we need to check availability of play services
+        if (checkPlayServices()) {
+            //Toast.makeText(this,"IsPlayService",Toast.LENGTH_SHORT).show();
+            // Building the GoogleApi client
+            Log.d(TAG,"checkPlayService - OK");
+            buildGoogleApiClient();
+            createLocationRequest();
+        }else{
+            Log.d(TAG,"checkPlayService - NO");
+        }
+        //////////////////////////////////////////////////
+
+//        Zegar w czasie rzeczywistym
 //        Runnable myRunnableThread = new CountDownRunner();
 //        Thread myThread = new Thread(myRunnableThread);
 //        myThread.start();
@@ -100,9 +144,9 @@ public class EventActivity extends Activity implements View.OnClickListener {
         aq = new AQuery(getApplicationContext());
 
         setTitle(session.getEmployeeName());
+
         //Wył. KLAWIATURE do czasu az pole tekstownie nie zostanie wybrane    (Disabled software keyboard in android until TextEdit is chosen)
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-
 
         //Inicjajca przyciskow
         btStart         = (ImageButton) findViewById(R.id.bt_start);
@@ -133,7 +177,6 @@ public class EventActivity extends Activity implements View.OnClickListener {
         btTempFinish.setOnClickListener(this);
         imSynchro.setOnClickListener(this);
 
-
         pd = new ProgressDialog(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog));
         pd.setCancelable(false);
         pd.setIndeterminate(true);
@@ -144,12 +187,21 @@ public class EventActivity extends Activity implements View.OnClickListener {
 
     @Override
     protected void onStart() {
+
         super.onStart();
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.connect();
+        }
     }
+
 
     @Override
     protected void onStop() {
         super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            stopLocationUpdates();
+            mGoogleApiClient.disconnect();
+        }
         Log.d(TAG, "onStop");
     }
 
@@ -157,6 +209,14 @@ public class EventActivity extends Activity implements View.OnClickListener {
     //onResume po odwroceniu urzadzenia
     protected void onResume() {
         super.onResume();
+
+        // Resuming the periodic location updates
+        if (mGoogleApiClient.isConnected()){
+            //Toast.makeText(this,"StartLocationUpdates",Toast.LENGTH_SHORT).show();
+            startLocationUpdates();
+        }else{
+            //Toast.makeText(this,"NOstartLocationUpdates",Toast.LENGTH_SHORT).show();
+        }
 
         if(session.getEmployeeId() == 0 ){
             //powrot na strone akrywacji
@@ -306,6 +366,13 @@ public class EventActivity extends Activity implements View.OnClickListener {
         data = getDateTime();
         isEventSend = 0;
 
+
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        location = getString(R.string.location_disabled);
+        if(mLastLocation != null) {
+            location = mLastLocation.getLatitude() + ";" + mLastLocation.getLongitude();
+        }
+
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
 
@@ -323,6 +390,7 @@ public class EventActivity extends Activity implements View.OnClickListener {
             params.put(Const.TYPE_ID_API_KEY, typeId);
             params.put(Const.SOURCE_ID_API_KEY, Const.SOURCE_ID);
             params.put(Const.DATATIME_API_KEY, data);
+            params.put(Const.LOCATION_API_KEY, location);
             params.put(Const.COMMENT_API_KEY, comment);
 
             params.put(Const.IDENTIFICATOR_API_KEY, session.getIdentificator());
@@ -362,7 +430,7 @@ public class EventActivity extends Activity implements View.OnClickListener {
 //                        Toast.makeText(getApplicationContext(), getString(R.string.no_connection), Toast.LENGTH_LONG).show();
                     }
 
-                    saveEventToLocalDatabase(typeId, data, comment, isEventSend, error);
+                    saveEventToLocalDatabase(typeId, data, location, comment, isEventSend, error);
 
                     //setButtons();
                     //viewLastEvents();
@@ -374,7 +442,7 @@ public class EventActivity extends Activity implements View.OnClickListener {
         } else {
             //WYŁ. Internet z karty  DANE MOBILNE OFF
             Log.d(TAG, "INTERNET-OFF");
-            saveEventToLocalDatabase(typeId, data, comment,isEventSend,"");
+            saveEventToLocalDatabase(typeId, data, location, comment,isEventSend,"");
 
             //setButtons();
             //viewLastEvents();
@@ -393,18 +461,20 @@ public class EventActivity extends Activity implements View.OnClickListener {
         if(error != null){
             msg = error;
         }
-        intent.putExtra("event",msg );
+        intent.putExtra("event", msg);
         startActivity(intent);
         //finish();
     }
-    private void saveEventToLocalDatabase(int typeId,String data, String comment, int isEventSend, String error){
+
+    private void saveEventToLocalDatabase(int typeId,String data, String location, String comment, int isEventSend, String error){
         EventDAO eventDAO = new EventDAO(context);
-        eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, "", comment, isEventSend, session.getEmployeeId(),session.getDeviceCode() );
+        eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, location, comment, isEventSend, session.getEmployeeId(),session.getDeviceCode() );
     }
 
     private void clearSessionEmplyeeData(){
         session.clearEmployee();
     }
+
     private String getDateTime() {
         SimpleDateFormat _format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String currentDataTimeStrong = _format.format(new Date());
@@ -630,6 +700,89 @@ public class EventActivity extends Activity implements View.OnClickListener {
         }else{
             Toast.makeText(this, getString(R.string.synchronized_off), Toast.LENGTH_LONG).show();
         }
+    }
+
+    /////////LOCATION//////////////////
+
+    /**
+     * Creating google api client object
+     */
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API).build();
+    }
+
+    /**
+     * Creating location request object
+     */
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest()
+                .setInterval(UPDATE_INTERVAL)
+                .setFastestInterval(FATEST_INTERVAL)
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setSmallestDisplacement(DISPLACEMENT);
+    }
+
+    /**
+     * Method to verify google play services on the device
+     */
+    private boolean checkPlayServices() {
+        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
+                GooglePlayServicesUtil.getErrorDialog(resultCode, this,PLAY_SERVICES_RESOLUTION_REQUEST).show();
+                Log.d(TAG, "checkPlayServices : ConnectionResult.FALSE: isUserRecoverableError :"+resultCode);
+            } else {
+                Log.d(TAG,"checkPlayServices: This device is not supported.");
+                Toast.makeText(getApplicationContext(), "This device is not supported.", Toast.LENGTH_LONG).show();
+                finish();
+            }
+            return false;
+
+        }else{
+            Log.d(TAG, "checkPlayServices: ConnectionResult.TRUE");
+            return true;
+        }
+    }
+    /**
+     * Starting the location updates
+     */
+    protected void startLocationUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+    }
+
+    /**
+     * Stopping location updates
+     */
+    protected void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+    }
+
+    /**
+     * Google api callback methods
+     */
+    @Override
+    public void onConnectionFailed(ConnectionResult result) {
+        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
+    }
+
+    @Override
+    public void onConnected(Bundle arg0) {
+        startLocationUpdates();
+    }
+
+    @Override
+    public void onConnectionSuspended(int arg0) {
+        //mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        // Assign the new location
+        mLastLocation = location;
+
     }
 
     @Override

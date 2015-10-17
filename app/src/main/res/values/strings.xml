@@ -45,6 +45,7 @@
     <string name="error_500">Błąd 500: Serwer zajęty lub wyłączony</string>
     <string name="error_404">Błąd 404: Brak połączenia z serwerem</string>
     <string name="error_offline">Nie można się zalogować - sprawdź połączenie internetowe</string>
+    <string name="location_disabled">Brak informacji - wyłączona opcja lokalizacji w urządzeniu</string>
     <string name="synchronized_off">Synchronizacja nie jest możliwa - sprawdz połączenie internetowe</string>
 
     <string name="event_dialog_yes">Ponów</string>
