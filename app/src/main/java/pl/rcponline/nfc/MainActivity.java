@@ -6,6 +6,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.hardware.SensorManager;
 import android.net.ConnectivityManager;
 import android.nfc.NfcAdapter;
@@ -58,9 +59,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
     SessionManager session;
     Context context;
     ImageView imSynchro;
-    private Handler mHandler = new Handler();
-    OrientationEventListener orientationListener;
-
+//    OrientationEventListener orientationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,15 +71,16 @@ public class MainActivity extends Activity implements View.OnClickListener{
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         //END FULL SCREEN
 
-        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
-        int rotation = display.getRotation();
-        if(rotation == Surface.ROTATION_180){
-            Log.d("ORI","180");
-        }else{
-            Log.d("ORI","0");
-        }
-//        Toast.makeText(context,rotation,Toast.LENGTH_LONG).show();
-        //Log.d("ORI",String.valueOf(rotation));
+        //Ustawienie layout w zaleznosci od pionowego polozenia
+//        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+//        int rotation = display.getRotation();
+//        if(rotation == Surface.ROTATION_180){
+//            setContentView(R.layout.activity_main);
+//        }else{
+//            setContentView(R.layout.activity_main_revers);
+//        }
+//        //END
+
         //DISABLE NAVIGATION BAR
         View decorView = getWindow().getDecorView();
         int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN;
@@ -118,26 +118,21 @@ public class MainActivity extends Activity implements View.OnClickListener{
             }
         }
 
-        imSynchro = (ImageView) findViewById(R.id.im_synchronized_main);
-        imSynchro.setOnClickListener(this);
 
-        orientationListener = new OrientationEventListener(context, SensorManager.SENSOR_DELAY_UI) {
-            public void onOrientationChanged(int orientation) {
-                Log.d("ORI",String.valueOf(orientation));
-//            if(canShow(orientation)){
-//                show();
-//            } else if(canDismiss(orientation)){
-//                dismiss();
+
+//        orientationListener = new OrientationEventListener(context, SensorManager.SENSOR_DELAY_UI) {
+//            public void onOrientationChanged(int orientation) {
+//                Log.d("1ORI",String.valueOf(orientation));
+////            if(canShow(orientation)){
+////                show();
+////            } else if(canDismiss(orientation)){
+////                dismiss();
+////            }
 //            }
-            }
-        };
+//        };
         //reactOnTag("ds32rgf");
     }
 
-
-    public void onConfigurationChanged(){
-        Log.d("ORI","jj");
-    }
     //COS Z UKRYWANEIM
 //    private Runnable decor_view_settings = new Runnable()
 //    {
@@ -168,7 +163,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
         Log.d(TAG, tagId);
 
         super.onNewIntent(intent);
-
         reactOnTag(tagId);
     }
 
@@ -190,13 +184,13 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 session.setEmployeePermission(emp.getPermission());
                 session.setIdentificator(tagId);
 
-                EventDAO eventDAO = new EventDAO(getApplicationContext());
-                Event event = eventDAO.getLastEventOfEmployee(emp.getId());
-                if(event != null){
-                    session.setLastEventTypeId(event.getType());
-                }else{
-                    session.setLastEventTypeId(6);
-                }
+//                EventDAO eventDAO = new EventDAO(getApplicationContext());
+//                Event event = eventDAO.getLastEventOfEmployee(emp.getId());
+//                if(event != null){
+//                    session.setLastEventTypeId(event.getType());
+//                }else{
+//                    session.setLastEventTypeId(6);
+//                }
 
                 Intent intentNew = new Intent(getApplicationContext(), EventActivity.class);
                 startActivity(intentNew);
@@ -216,9 +210,8 @@ public class MainActivity extends Activity implements View.OnClickListener{
             Log.d(TAG, "synchronized");
             synchronizedWithServer();
         }
-
-
     }
+
     @Override
     protected void onResume() {
 
@@ -234,20 +227,28 @@ public class MainActivity extends Activity implements View.OnClickListener{
         }else{
             //Toast.makeText(this,R.string.nfc_disabled,Toast.LENGTH_LONG).show();
         }
-        Log.d("ORI", "r");
-//        orientationListener.enable();
+
+        //Reaguje na zmiane ustawienia pionowego czytnika
+        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+        int rotation = display.getRotation();
+        if(rotation == Surface.ROTATION_180){
+            setContentView(R.layout.activity_main);
+        }else{
+            setContentView(R.layout.activity_main_revers);
+        }
+        imSynchro = (ImageView) findViewById(R.id.im_synchronized_main);
+        imSynchro.setOnClickListener(this);
+
+        //END
         super.onResume();
     }
 
     @Override
     protected void onPause() {
 
-
         if(nfcAdapter != null) {
             nfcAdapter.disableForegroundDispatch(this);
         }
-
-//        orientationListener.disable();
         super.onPause();
     }
 
@@ -260,7 +261,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
         return super.onCreateOptionsMenu(menu);
     }
 
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
@@ -269,7 +269,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
 //                DAO.synchronizedWithServer(getApplicationContext());
                 synchronizedWithServer();
                 return true;
-
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -285,16 +284,33 @@ public class MainActivity extends Activity implements View.OnClickListener{
                     TextView txtCurrentTime = (TextView) findViewById(R.id.tv_time);
                     TextView txtCurrentDate = (TextView) findViewById(R.id.tv_date);
                     Date dt = new Date();
-                    //int hours = dt.getHours();
-                    //int minutes = dt.getMinutes();
-                    //int seconds = dt.getSeconds();
                     //String curTime = hours + ":" + minutes + ":" + seconds;
+
+
+                    //PROBLEM Z MIGAJACYM :  jest taki ze pusty znak i : maja rozne szerokosci
+//                    SimpleDateFormat dfHours = new SimpleDateFormat("HH");
+//                    SimpleDateFormat dfMinutes = new SimpleDateFormat("mm");
+//                    SimpleDateFormat dfSeconds = new SimpleDateFormat("ss");
+//
+//                    String seconds = dfSeconds.format(dt.getTime());
+//                    String minutes = dfMinutes.format(dt.getTime());
+//                    String hours   = dfHours.format(dt.getTime());
+//
+//                    Log.d("CLOCK",seconds);
+//
+//                    String curTime = "";
+//                    if((Integer.valueOf(seconds) % 2) == 0){
+//                        curTime = hours + "_" + minutes;
+//                    }else{
+//                        curTime = hours + ":" + minutes;
+//                    }
+
+
                     SimpleDateFormat dfTime = new SimpleDateFormat("HH:mm");
                     String curTime = dfTime.format(dt.getTime());
 
                     SimpleDateFormat dfDate = new SimpleDateFormat("dd.MM.yyyy");
                     String curDate = dfDate.format(dt.getTime());
-                    //String curTime = String.valueOf(dt.getTime());
                     txtCurrentTime.setText(curTime);
                     txtCurrentDate.setText(curDate);
 
@@ -417,5 +433,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
         return super.onKeyDown(keyCode, event);
     }
+
 
 }

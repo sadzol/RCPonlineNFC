@@ -56,6 +56,7 @@ public class OnlineListener extends BroadcastReceiver {
 
             if (firstConnect) {
 
+                Log.d(TAG, "First connection");
                 EventDAO eventDAO = new EventDAO(context);
                 List<Event> events = eventDAO.getEventsWithStatus(0);
 
@@ -71,6 +72,7 @@ public class OnlineListener extends BroadcastReceiver {
                 Gson g = new Gson();
                 Type type = new TypeToken<List<Event>>(){}.getType();
                 String eventsString = g.toJson(events, type);
+
                 Log.d(TAG, eventsString);
                 HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
                 SessionManager session = new SessionManager(context);
@@ -85,20 +87,21 @@ public class OnlineListener extends BroadcastReceiver {
                 aq.ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
                     @Override
                     public void callback(String url, JSONObject json, AjaxStatus status) {
-                        //super.callback(url, object, status);
                         String message = "";
-//                        ArrayList<Event> eventsServer = new ArrayList<Event>();
 
                         if (json != null) {
                             if (json.optBoolean("success") == true) {
+                                Log.d(TAG,"success=true");
                                 DAO.saveAllDataFromServer(json,context);
-
                             }else{
+                                Log.d(TAG,"success=false");
                                 message = json.optString("message");
                             }
+
                         } else {
                             //TODO co z tymi errorami zrobic???
-                            //Kiedy kod 500( Internal Server Error)
+
+                                //Kiedy kod 500( Internal Server Error)
                             if (status.getCode() == 500) {
                                 message = context.getString(R.string.error_500);
 
@@ -118,9 +121,14 @@ public class OnlineListener extends BroadcastReceiver {
                     }
                 });
                 firstConnect = false;
+
+            }else{
+                firstConnect = true;
+//                Log.d(TAG, "Next connection");
             }
         } else {
             firstConnect = true;
+            Log.d(TAG, "OFFLINE");
             ///Toast.makeText(context, "OFFLINE",Toast.LENGTH_SHORT).show();
         }
 

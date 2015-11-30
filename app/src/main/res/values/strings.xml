@@ -10,24 +10,26 @@
     <string name="nfc_disabled">Wymaga uruchomienia NFC</string>
     <string name="action_settings">Settings</string>
     <string name="put_your_card">Przyłóż kartę</string>
+    <string name="night_work">Przycisk rozpoczecia pracy aktywny na początku dnia</string>
+    <string name="night_work_summary">Pozwala uniknąć dodatkowych błędów rejestracji, jeśli pracownik nie zakończył pracy w dniu poprzednim</string>
 
-    <string name="event_work_start">Rozpoczęcie\npracy</string>
+    <string name="event_work_start">Rozpoczęcie\ntreningu</string>
     <string name="event_break_start">Przerwa</string>
     <string name="event_break_finish">Koniec\nprzerwy</string>
     <string name="event_temp_start">Wyjście\nsłużbowe</string>
     <string name="event_temp_finish">Powrót</string>
-    <string name="event_work_finish">Koniec\npracy</string>
+    <string name="event_work_finish">Koniec\ntreningu</string>
 
     <string name="no_connection">Brak połączenia z serwerem: Synchronizacja zdarzeń nastąpi automatycznie po prawidłowym połączeniu</string>
     <string name="save_event">Zapisuje zdarzenie</string>
     <string name="last_events">Ostatnie zdarzenia</string>
 
-    <string name="work_start">Rozpoczęcie pracy</string>
+    <string name="work_start">Rozpoczęcie treningu</string>
     <string name="break_start">Przerwa</string>
     <string name="break_finish">Koniec przerwy</string>
     <string name="temp_out_start">Wyjście służbowe</string>
     <string name="temp_out_finish">Powrót</string>
-    <string name="work_finish">Koniec pracy</string>
+    <string name="work_finish">Koniec treningu</string>
 
     <string name="home">Ekran główny</string>
     <string name="settings">Ustawienia</string>
@@ -37,7 +39,7 @@
 
     <string name="login">Logowanie..</string>
     <string name="please_wait">Zapisywanie..</string>
-    <string name="searching">Wyszukiwanie...</string>
+    <string name="searching">Wyszukiwanie..</string>
     <string name="synchronized_with_server">Synchronizacja z serwerem...</string>
 
     <string name="bad_login_or_pass">Nieprawidłowy login lub hasło</string>
@@ -62,7 +64,6 @@
     <string name="settings_comment_desc">Udostępnij pole</string>
     <string name="settings_view_last_events">Ostatnie zdarzenia</string>
     <string name="settings_view_last_events_desc">Włącz widoczność</string>
-
 
     <string name="hello_world">Hello world!</string>
 </resources>

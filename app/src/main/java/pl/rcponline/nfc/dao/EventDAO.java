@@ -129,7 +129,7 @@ public class EventDAO {
                 new String[]{ String.valueOf(status)},
                 null,null,null);
 
-        Log.d(TAG, "Count Events = "+cursor.getCount());
+        Log.d(TAG, "Count Events with status ("+String.valueOf(status)+") = "+cursor.getCount());
         cursor.moveToFirst();
         while(!cursor.isAfterLast()){
             listEvents.add(cursorToEvent(cursor));

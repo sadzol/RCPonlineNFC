@@ -130,28 +130,32 @@ public class DAO {
 
                     Employee emp = empDAO.createEmployee(employeeId, name, firstName, permission);
 
-                    JsonArray jsonArrayIdntificator = jsonEmp.get("identificator").getAsJsonArray();
-                    Log.d(TAG, jsonEmp.get("identificator").toString());
-                    for (int j = 0; j < jsonArrayIdntificator.size(); j++) {
+                    if(jsonEmp.get("identificator").isJsonArray()) {
+                        JsonArray jsonArrayIdntificator = jsonEmp.get("identificator").getAsJsonArray();
+                        Log.d(TAG, jsonEmp.get("identificator").toString());
+                        for (int j = 0; j < jsonArrayIdntificator.size(); j++) {
 //                      Identificator ident = gson.fromJson(jsonArrayIdntificator.get(j).getAsString(), Identificator.class);
-                        Identificator ident = new Identificator();
-                        JsonObject jsonIdentificator = jsonArrayIdntificator.get(j).getAsJsonObject();
-                        ident.setNumber(jsonIdentificator.get("number").getAsString());
-                        ident.setDesc(jsonIdentificator.get("desc").getAsString());
+                            Identificator ident = new Identificator();
+                            JsonObject jsonIdentificator = jsonArrayIdntificator.get(j).getAsJsonObject();
+                            ident.setNumber(jsonIdentificator.get("number").getAsString());
+                            ident.setDesc(jsonIdentificator.get("desc").getAsString());
 //                      ident.setNumber(jsonArrayIdntificator.get(j).getAsString());
 
-                        if (ident.getNumber() != null) {
-                            ident.setEmployee(emp);
-                            idDAO.insertIdentificator(ident);
+                            if (ident.getNumber() != null) {
+                                ident.setEmployee(emp);
+                                idDAO.insertIdentificator(ident);
+                            }
                         }
                     }
-                    JsonArray jsonArrayEvent = jsonEmp.get("events").getAsJsonArray();
-                    for (int k = 0; k < jsonArrayEvent.size(); k++) {
-                        Event event = gson.fromJson(jsonArrayEvent.get(k).getAsString(), Event.class);
+                    if(jsonEmp.get("events").isJsonArray()){
+                        JsonArray jsonArrayEvent = jsonEmp.get("events").getAsJsonArray();
+                        for (int k = 0; k < jsonArrayEvent.size(); k++) {
+                            Event event = gson.fromJson(jsonArrayEvent.get(k).getAsString(), Event.class);
 
-                        if (event != null) {
-                            event.setEmployee(emp);
-                            eventDAO.insertEvent(event);
+                            if (event != null) {
+                                event.setEmployee(emp);
+                                eventDAO.insertEvent(event);
+                            }
                         }
                     }
                 }

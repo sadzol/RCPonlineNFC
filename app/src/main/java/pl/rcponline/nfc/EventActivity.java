@@ -53,6 +53,7 @@ import com.google.android.gms.location.LocationSettingsStatusCodes;
 import org.json.JSONObject;
 
 import java.lang.reflect.Type;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -110,10 +111,8 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         }
 
         //FULL SCREEN BEFORE setContetnView
-//        Toast.makeText(this,String.valueOf(session.getEmployeePermission()),Toast.LENGTH_SHORT).show();
         if(session.getEmployeePermission() < 1) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-//            requestWindowFeature(Window.FEATURE_NO_TITLE);
         }
         //END FULL SCREEN
 
@@ -125,7 +124,6 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
         ///////////LOC///////// First we need to check availability of play services
         if (checkPlayServices()) {
-            //Toast.makeText(this,"IsPlayService",Toast.LENGTH_SHORT).show();
             // Building the GoogleApi client
             Log.d(TAG,"checkPlayService - OK");
             buildGoogleApiClient();
@@ -397,7 +395,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             params.put(Const.EMPLOYEE_ID_API_KEY, session.getEmployeeId());
             params.put(Const.DEVICE_CODE_API_KEY, session.getDeviceCode());
 
-            Log.d(TAG, "API SEND: login="+session.getLogin()+", pass="+session.getPassword()+", typeId="+typeId+", sourceId="+Const.SOURCE_ID+", datatime="+data+", id="+session.getIdentificator()+", employeeId="+session.getEmployeeId()+", device_code="+session.getDeviceCode());
+            Log.d(TAG, "API SEND: login=" + session.getLogin() + ", pass=" + session.getPassword() + ", typeId=" + typeId + ", sourceId=" + Const.SOURCE_ID + ", datatime=" + data + ", id=" + session.getIdentificator() + ", employeeId=" + session.getEmployeeId() + ", device_code=" + session.getDeviceCode());
 
             ProgressDialog dialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_DARK);
             dialog.setIndeterminate(true);
@@ -406,6 +404,8 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             dialog.setCanceledOnTouchOutside(true);
             dialog.setMessage(getString(R.string.please_wait));
 
+            Log.d(TAG, url);
+            Log.d(TAG, params.toString());
             aq.progress(dialog).ajax(url, params, JSONObject.class, new AjaxCallback<JSONObject>() {
                 @Override
                 public void callback(String url, JSONObject json, AjaxStatus status) {
@@ -468,7 +468,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
     private void saveEventToLocalDatabase(int typeId,String data, String location, String comment, int isEventSend, String error){
         EventDAO eventDAO = new EventDAO(context);
-        eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, location, comment, isEventSend, session.getEmployeeId(),session.getDeviceCode() );
+        eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, location, comment, isEventSend, session.getEmployeeId(), session.getDeviceCode());
     }
 
     private void clearSessionEmplyeeData(){
@@ -562,6 +562,16 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         ivFinishOff.setVisibility(View.INVISIBLE);
         ivTempOff.setVisibility(View.INVISIBLE);
 
+        EventDAO eventDAO = new EventDAO(getApplicationContext());
+        Event event = eventDAO.getLastEventOfEmployee(session.getEmployeeId());
+
+
+        if(isCurrentButtonIsOk(event)){
+            session.setLastEventTypeId(event.getType());
+        }else{
+            session.setLastEventTypeId(6);
+        }
+        Log.d("EVENTID",String.valueOf(session.getLastEventTypeId()));
         switch (session.getLastEventTypeId()) {
             //FINISH
             case 6:
@@ -617,17 +627,15 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
                 break;
             default:
 
-                btTempStart.setVisibility(View.VISIBLE);
-                btTempStart.setEnabled(true);
-                btBreakStart.setVisibility(View.VISIBLE);
-                btBreakStart.setEnabled(true);
-                btFinish.setVisibility(View.VISIBLE);
-                btFinish.setEnabled(true);
+                //DEFAULT CZYLI EVENT_ID 6 (koniec pracy)
+                btStart.setVisibility(View.VISIBLE);
+                btStart.setEnabled(true);
 
                 ivBreakOff.setVisibility(View.VISIBLE);
-                ivFinishOff.setVisibility(View.VISIBLE);
                 ivTempOff.setVisibility(View.VISIBLE);
-                llDatatime.setBackgroundResource(R.drawable.gradient_green);
+                ivFinishOff.setVisibility(View.VISIBLE);
+                llDatatime.setBackgroundResource(R.drawable.gradient_red);
+
                 break;
         }
     }
@@ -668,12 +676,18 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
                     if (json != null) {
                         if (json.optBoolean("success") == true) {
+                            Log.d(TAG, "success: true");
                             DAO.saveAllDataFromServer(json, context);
 
+                            viewLastEvents();
+                            setButtons();
+
                         }else{
+                            Log.d(TAG, "success: false");
                             message = json.optString("message");
                         }
                     } else {
+                        Log.d(TAG, "success - no json");
                         //TODO co z tymi errorami zrobic???
                         //Kiedy kod 500( Internal Server Error)
                         if (status.getCode() == 500) {
@@ -695,8 +709,8 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
                     Log.i(TAG, message);
                 }
             });
-            setButtons();
-            viewLastEvents();
+//            setButtons();
+//            viewLastEvents();
         }else{
             Toast.makeText(this, getString(R.string.synchronized_off), Toast.LENGTH_LONG).show();
         }
@@ -752,14 +766,12 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
     protected void startLocationUpdates() {
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
     }
-
     /**
      * Stopping location updates
      */
     protected void stopLocationUpdates() {
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
-
     /**
      * Google api callback methods
      */
@@ -803,5 +815,51 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         }
 
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * Jesli pracownik zapimni odbic wyjscie...
+     * Jesli mamy ustawiona prace w nocy  -> nie zmieniamy wyswietlania osatniego eventa
+     * Jesli mamy ustawiona prace dniowa  -> zmianiamy dostepnosc przycisku na PLAY
+     */
+    private boolean isCurrentButtonIsOk(Event event){
+
+        //Czy jest wg. event pracownika czy event jest pusty(nie ma go)
+        Log.d("BLAD",String.valueOf(event.getId()));
+        if(event.getId() != 0){
+
+            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+            if(sp.getBoolean("night_work",true)) {//nie wiem czemu odwrotnie
+
+                SimpleDateFormat _formatFrom = new SimpleDateFormat("yyyy-MM-dd");
+                SimpleDateFormat _formatTo = new SimpleDateFormat("yyyyMMdd");
+                String currentDate = _formatTo.format(new Date());
+
+                try {
+                    Date eventDate = _formatFrom.parse(event.getDatetime());
+                    String eventDateString = _formatTo.format(eventDate);
+
+                    if(eventDateString.compareTo(currentDate) < 0 ){
+//                        Log.d("BUTTON_", "event < now");
+                        return false;
+                    }else{
+//                        Log.d("BUTTON_", "event > now");
+                        return true;
+                    }
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                    return true;
+                }
+            }else{
+//                Log.d("BUTTON_", "NIGHT WORK TRUE- noc");
+                //praca nocna eventy zostaja zawsze jak sa
+                return true;
+            }
+
+        }else{
+            Log.d("BLAD","Nie ma eventa id=0");
+            return false;
+        }
+
     }
 }
