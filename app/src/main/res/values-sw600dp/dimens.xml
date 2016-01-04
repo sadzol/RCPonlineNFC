@@ -2,7 +2,7 @@
 <resources>
     <dimen name="welcome_timer">140sp</dimen>
     <dimen name="welcome_date">54sp</dimen>
-    <dimen name="welcome_put_your_card">46sp</dimen>
+    <dimen name="welcome_put_your_card">40sp</dimen>
     <dimen name="welcome_put_your_card_magin_top">160dp</dimen>
 
     <dimen name="login_input_padding">14dp</dimen>

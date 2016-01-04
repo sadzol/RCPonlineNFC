@@ -8,6 +8,15 @@
     tools:context="pl.rcponline.nfc.WelcomeActivity"
     >
 
+    <TextView
+        android:id="@+id/tv_touchdown_card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/put_your_card"
+        android:textSize="@dimen/welcome_put_your_card"
+        android:layout_marginLeft="20dp"
+        android:textColor="@android:color/white"
+        />
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -37,7 +46,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
-            android:src="@drawable/ic_action_refresh"/>
+            android:src="@drawable/ic_action_refresh"
+            />
     </LinearLayout>
 
     <LinearLayout
@@ -83,16 +93,6 @@
             />
 
     </LinearLayout>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/put_your_card"
-        android:textSize="@dimen/welcome_put_your_card"
-        android:layout_marginTop="@dimen/welcome_put_your_card_magin_top"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_marginRight="20dp"
-        android:textColor="@android:color/white"
-        />
+
 
 </RelativeLayout>
