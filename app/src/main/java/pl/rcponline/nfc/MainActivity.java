@@ -279,6 +279,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
     @Override
     protected void onPause() {
+//        Log.d(TAG,"onPaue-start");
         unregisterReceiver(receiverWifi);
         unregisterReceiver(battery_receiver);
 
@@ -286,6 +287,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
             nfcAdapter.disableForegroundDispatch(this);
         }
         super.onPause();
+//        Log.d(TAG, "onPaue-endm");
     }
 
     @Override

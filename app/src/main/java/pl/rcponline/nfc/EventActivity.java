@@ -6,9 +6,11 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.Camera;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
@@ -16,7 +18,10 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewDebug;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -39,22 +44,19 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.LocationSettingsResult;
-import com.google.android.gms.location.LocationSettingsStates;
-import com.google.android.gms.location.LocationSettingsStatusCodes;
-
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +67,7 @@ import pl.rcponline.nfc.dao.DAO;
 import pl.rcponline.nfc.dao.EventDAO;
 import pl.rcponline.nfc.model.Event;
 
-public class EventActivity extends Activity implements View.OnClickListener ,ConnectionCallbacks, OnConnectionFailedListener, LocationListener {
+public class EventActivity extends Activity implements View.OnClickListener ,ConnectionCallbacks, OnConnectionFailedListener, LocationListener, SurfaceHolder.Callback {
 
     private static final String TAG = "EVENT_ACTIVITY";
     AQuery aq;
@@ -84,6 +86,11 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
     ImageButton btStart, btFinish, btBreakStart, btBreakFinish, btTempStart, btTempFinish;
     ImageView imSynchro,ivStartOff,ivFinishOff,ivBreakOff,ivTempOff;
     LinearLayout llDatatime;
+
+    /////CAMERA//////
+    private SurfaceHolder surfaceHolder;
+    private SurfaceView svCameraPreview;
+    private Camera camera;
 
     ///////////////LOCATION///////////////////////////////////////////////////////
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
@@ -166,6 +173,11 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         llLastEvent =(LinearLayout) findViewById(R.id.ll_last_events);
         rlBreak = (RelativeLayout) findViewById(R.id.ll_pause);
         rlPayExit= (RelativeLayout) findViewById(R.id.ll_record);
+
+        //Podglad kamerki
+        svCameraPreview = (SurfaceView) findViewById(R.id.sv_camera_preview);
+        surfaceHolder = svCameraPreview.getHolder();
+        surfaceHolder.addCallback(this);
 
         btStart.setOnClickListener(this);
         btFinish.setOnClickListener(this);
@@ -250,6 +262,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         }else {
             rlPayExit.setVisibility(View.GONE);
         }
+
     }
 
     @Override
@@ -454,6 +467,10 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
     }
 
     private void goToMainActivityWithToast(String error){
+
+        //SAVE PICTURE
+        camera.takePicture(null,null,picHandler);
+
         Intent intent = new Intent(getApplicationContext(),MainActivity.class);
         int resourceType = getResources().getIdentifier(String.valueOf(Const.EVENT_TYPE[typeId-1]), "string", getPackageName());
         String msg = context.getString(R.string.event_saved) + " " + context.getString(resourceType).toUpperCase();
@@ -462,7 +479,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             msg = error;
         }
         intent.putExtra("event", msg);
-        startActivity(intent);
+        //startActivity(intent);
         //finish();
     }
 
@@ -862,4 +879,138 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         }
 
     }
+
+    ///////////////////////CAMERA/////////////////////////////
+    /** A basic Camera preview class */
+    public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
+        private SurfaceHolder mHolder;
+        private Camera mCamera;
+
+        public CameraPreview(Context context, Camera camera) {
+            super(context);
+            mCamera = camera;
+
+            // Install a SurfaceHolder.Callback so we get notified when the
+            // underlying surface is created and destroyed.
+            mHolder = getHolder();
+            mHolder.addCallback(this);
+            // deprecated setting, but required on Android versions prior to 3.0
+//            mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        }
+
+        public void surfaceCreated(SurfaceHolder holder) {
+            // The Surface has been created, now tell the camera where to draw the preview.
+            try {
+                mCamera.setPreviewDisplay(holder);
+                mCamera.startPreview();
+            } catch (IOException e) {
+                Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+            }
+        }
+
+        public void surfaceDestroyed(SurfaceHolder holder) {
+            // empty. Take care of releasing the Camera preview in your activity.
+        }
+
+        public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+            // If your preview can change or rotate, take care of those events here.
+            // Make sure to stop the preview before resizing or reformatting it.
+
+            if (mHolder.getSurface() == null){
+                // preview surface does not exist
+                return;
+            }
+
+            // stop preview before making changes
+            try {
+                mCamera.stopPreview();
+            } catch (Exception e){
+                // ignore: tried to stop a non-existent preview
+            }
+
+            // set preview size and make any resize, rotate or
+            // reformatting changes here
+
+            // start preview with new settings
+            try {
+                mCamera.setPreviewDisplay(mHolder);
+                mCamera.startPreview();
+
+            } catch (Exception e){
+                Log.d(TAG, "Error starting camera preview: " + e.getMessage());
+            }
+        }
+    }
+    /** OPEN FRONT CAMERA - A safe way to get an instance of the Camera object. */
+    public static Camera getCameraInstance(){
+        Camera c = null;
+
+            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+            for(int cameraIndex = 0; cameraIndex < Camera.getNumberOfCameras(); cameraIndex ++){
+                Camera.getCameraInfo(cameraIndex, cameraInfo);
+                if(cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT){
+                    try {
+                        c.open(cameraIndex);
+                    }
+                    catch (Exception e){
+                        Log.e(TAG, "KAMERA NIE JEST DOSTEPNA : " + e.getMessage());
+                        // Camera is not available (in use or does not exist)
+                    }
+                }
+            }
+//            c = Camera.open(); // attempt to get a Camera instance
+
+        return c; // returns null if camera is unavailable
+    }
+
+    //CAMERA PREVIEW ?
+    Camera.PictureCallback picHandler = new Camera.PictureCallback() {
+        @Override
+        public void onPictureTaken(byte[] data, Camera camera) {
+            Calendar currentDate = Calendar.getInstance();
+            String timeStamp = new SimpleDateFormat("dd_MM_yyyy HH:ss").format(currentDate.getTime());
+            File pictureFile = new File(Environment.getExternalStorageDirectory().getPath() + "/DCIM/pawelec.jpg");//imie_"+timeStamp+".jpg");
+
+            try {
+                FileOutputStream fos = new FileOutputStream(pictureFile.toString());
+                fos.write(data);
+                fos.close();
+                Toast.makeText(EventActivity.this, "Zapisano foto", Toast.LENGTH_SHORT).show();
+            }catch (FileNotFoundException e){
+                Log.e(TAG, "Zdjecie sie nie zapisalo, FILE NO FOUND");
+            }catch (IOException e){
+                Log.e(TAG, "INNY BLAD");
+            }
+        }
+    };
+
+        @Override
+        public void surfaceCreated(SurfaceHolder holder) {
+            camera = Camera.open();
+            try{
+                camera.setPreviewDisplay(holder);
+                camera.startPreview();
+            }catch (IOException e){
+                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CREATED : " + e.getMessage());
+            };
+        }
+
+        @Override
+        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            try{
+                camera.setPreviewDisplay(holder);
+                camera.startPreview();
+            }catch (IOException e){
+                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CHANGED : " + e.getMessage());
+            }
+
+        }
+
+        @Override
+        public void surfaceDestroyed(SurfaceHolder holder) {
+            camera.stopPreview();
+            camera.release();
+            camera = null;
+        }
+
 }
