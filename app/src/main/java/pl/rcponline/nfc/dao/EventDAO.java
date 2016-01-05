@@ -52,7 +52,6 @@ public class EventDAO {
         values.put(DBHelper.COLUMN_EVENT_SOURCE_ID, sourceId);
         values.put(DBHelper.COLUMN_EVENT_IDENTIFICATOR, identificator);
         values.put(DBHelper.COLUMN_EVENT_DATETIME, datetime);
-        values.put(DBHelper.COLUMN_EVENT_LOCATION, location);
         values.put(DBHelper.COLUMN_EVENT_COMMENT, comment);
         values.put(DBHelper.COLUMN_EVENT_STATUS, status);
         values.put(DBHelper.COLUMN_EVENT_EMPLOYEE_ID, employeeId);
@@ -76,7 +75,6 @@ public class EventDAO {
         values.put(DBHelper.COLUMN_EVENT_SOURCE_ID, event.getSource());
         values.put(DBHelper.COLUMN_EVENT_IDENTIFICATOR, event.getIdentificator());
         values.put(DBHelper.COLUMN_EVENT_DATETIME, event.getDatetime());
-        values.put(DBHelper.COLUMN_EVENT_LOCATION, event.getLocation());
         values.put(DBHelper.COLUMN_EVENT_COMMENT, event.getComment());
         values.put(DBHelper.COLUMN_EVENT_STATUS, event.getStatus());
         values.put(DBHelper.COLUMN_EVENT_EMPLOYEE_ID, event.getEmployee().getId());
@@ -129,7 +127,7 @@ public class EventDAO {
                 new String[]{ String.valueOf(status)},
                 null,null,null);
 
-        Log.d(TAG, "Count Events with status ("+String.valueOf(status)+") = "+cursor.getCount());
+        Log.d(TAG, "Count Events = "+cursor.getCount());
         cursor.moveToFirst();
         while(!cursor.isAfterLast()){
             listEvents.add(cursorToEvent(cursor));

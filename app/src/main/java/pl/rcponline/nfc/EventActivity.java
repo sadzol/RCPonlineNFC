@@ -404,8 +404,8 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             dialog.setCanceledOnTouchOutside(true);
             dialog.setMessage(getString(R.string.please_wait));
 
-            Log.d(TAG, url);
-            Log.d(TAG, params.toString());
+//            Log.d(TAG, url);
+//            Log.d(TAG, params.toString());
             aq.progress(dialog).ajax(url, params, JSONObject.class, new AjaxCallback<JSONObject>() {
                 @Override
                 public void callback(String url, JSONObject json, AjaxStatus status) {

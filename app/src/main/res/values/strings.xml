@@ -13,23 +13,23 @@
     <string name="night_work">Przycisk rozpoczecia pracy aktywny na początku dnia</string>
     <string name="night_work_summary">Pozwala uniknąć dodatkowych błędów rejestracji, jeśli pracownik nie zakończył pracy w dniu poprzednim</string>
 
-    <string name="event_work_start">Rozpoczęcie\ntreningu</string>
+    <string name="event_work_start">Rozpoczęcie\npracy</string>
     <string name="event_break_start">Przerwa</string>
     <string name="event_break_finish">Koniec\nprzerwy</string>
     <string name="event_temp_start">Wyjście\nsłużbowe</string>
     <string name="event_temp_finish">Powrót</string>
-    <string name="event_work_finish">Koniec\ntreningu</string>
+    <string name="event_work_finish">Koniec\npracy</string>
 
     <string name="no_connection">Brak połączenia z serwerem: Synchronizacja zdarzeń nastąpi automatycznie po prawidłowym połączeniu</string>
     <string name="save_event">Zapisuje zdarzenie</string>
     <string name="last_events">Ostatnie zdarzenia</string>
 
-    <string name="work_start">Rozpoczęcie treningu</string>
+    <string name="work_start">Rozpoczęcie pracy</string>
     <string name="break_start">Przerwa</string>
     <string name="break_finish">Koniec przerwy</string>
     <string name="temp_out_start">Wyjście służbowe</string>
     <string name="temp_out_finish">Powrót</string>
-    <string name="work_finish">Koniec treningu</string>
+    <string name="work_finish">Koniec pracy</string>
 
     <string name="home">Ekran główny</string>
     <string name="settings">Ustawienia</string>
@@ -66,4 +66,8 @@
     <string name="settings_view_last_events_desc">Włącz widoczność</string>
 
     <string name="hello_world">Hello world!</string>
+    <string name="make_foto">Zrób zdjęcie</string>
+    <string name="make_foto_desc">Zrób zdjęcie opis</string>
+    <string name="make_foto_preview">Podgląd zdjęcia</string>
+    <string name="make_foto_preview_desc">Podgląd zdjęcia opis</string>
 </resources>

@@ -3,22 +3,26 @@ package pl.rcponline.nfc;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Configuration;
-import android.hardware.SensorManager;
 import android.net.ConnectivityManager;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.os.BatteryManager;
 import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.SignalStrength;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.View;
 import android.view.Window;
@@ -58,8 +62,11 @@ public class MainActivity extends Activity implements View.OnClickListener{
     Runnable myRunnableThread;
     SessionManager session;
     Context context;
-    ImageView imSynchro;
-//    OrientationEventListener orientationListener;
+    ImageView imSynchro,imWifi,imBattery,imGsm;
+
+    WifiReceiver receiverWifi;
+    TelephonyManager telephonyManager;
+    myPhoneStateListener psListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +77,11 @@ public class MainActivity extends Activity implements View.OnClickListener{
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         //END FULL SCREEN
+
+////        //GSM
+//        imGsm     = (ImageView) findViewById(R.id.im_gsm);
+//        psListener = new myPhoneStateListener();
+//        telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
 
         //Ustawienie layout w zaleznosci od pionowego polozenia
 //        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
@@ -118,7 +130,10 @@ public class MainActivity extends Activity implements View.OnClickListener{
             }
         }
 
-
+////        //GSM
+//        imGsm     = (ImageView) findViewById(R.id.im_gsm);
+//        psListener = new myPhoneStateListener();
+//        telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
 
 //        orientationListener = new OrientationEventListener(context, SensorManager.SENSOR_DELAY_UI) {
 //            public void onOrientationChanged(int orientation) {
@@ -239,12 +254,33 @@ public class MainActivity extends Activity implements View.OnClickListener{
         imSynchro = (ImageView) findViewById(R.id.im_synchronized_main);
         imSynchro.setOnClickListener(this);
 
+        //WIFI STRONG SIGNAL
+        imWifi = (ImageView) findViewById(R.id.im_wifi);
+        receiverWifi = new WifiReceiver();
+        registerReceiver(receiverWifi, new IntentFilter(WifiManager.RSSI_CHANGED_ACTION));
+
+        //Battery
+        imBattery = (ImageView) findViewById(R.id.im_battery);
+        registerReceiver(battery_receiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+
+
+
         //END
         super.onResume();
+
+        //        //GSM
+        imGsm     = (ImageView) findViewById(R.id.im_gsm);
+        psListener = new myPhoneStateListener();
+        telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+
+        //GSM SIGNAL
+        telephonyManager.listen(psListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
     }
 
     @Override
     protected void onPause() {
+        unregisterReceiver(receiverWifi);
+        unregisterReceiver(battery_receiver);
 
         if(nfcAdapter != null) {
             nfcAdapter.disableForegroundDispatch(this);
@@ -434,5 +470,160 @@ public class MainActivity extends Activity implements View.OnClickListener{
         return super.onKeyDown(keyCode, event);
     }
 
+    class WifiReceiver extends BroadcastReceiver {
 
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            final WifiManager wifi = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            int state = wifi.getWifiState();
+            if (state == WifiManager.WIFI_STATE_ENABLED) {
+//                Log.d("WIFI", "wifi=on");
+//                tvWifiStatus.setText("WIFI = ON");
+                List<ScanResult> results = wifi.getScanResults();
+
+                for (ScanResult result : results) {
+                    if (result.BSSID.equals(wifi.getConnectionInfo().getBSSID())) {
+                        int level = WifiManager.calculateSignalLevel(wifi.getConnectionInfo().getRssi(), result.level);
+                        int difference = level * 100 / result.level;
+                        int signalStrangth = 0;
+                        if (difference >= 100) {
+                            signalStrangth = 4;
+//                            imWifi.setImageDrawable(R.drawable.wifi_level_4);//ImageResource(R.id.wifi_level_4);
+                        } else if (difference >= 75){
+                            signalStrangth = 3;
+//                            imWifi.setImageResource(R.id.wifi_level_3);
+                        } else if (difference >= 50){
+                            signalStrangth = 2;
+//                            imWifi.setImageResource(R.id.wifi_level_2);
+                        }else if (difference >= 25){
+                            signalStrangth = 1;
+//                            imWifi.setImageResource(R.id.wifi_level_1);
+                        }
+                        int resourceType = getResources().getIdentifier("wifi_level_" + signalStrangth, "drawable", getPackageName());
+                        imWifi.setImageResource(resourceType);
+                        Log.d("WIFI", "Difference :" + difference + " signal state:" + signalStrangth);
+                    }
+                }
+            }else{
+//                Log.d("WIFI", "wifi=on");
+                int resourceType = getResources().getIdentifier("wifi_level_0", "drawable", getPackageName());
+                imWifi.setImageResource(resourceType);
+            }
+
+        }
+    }
+    private BroadcastReceiver battery_receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            boolean isPresent = intent.getBooleanExtra("present", false);
+            int scale = intent.getIntExtra("scale", -1);
+            int status = intent.getIntExtra("status", 0);
+            int rawlevel = intent.getIntExtra("level", -1);
+            int level = 0;
+            int resourceType;
+
+            if (isPresent) {
+                if (rawlevel >= 0 && scale > 0) {
+                    level = (rawlevel * 100) / scale;
+                }
+
+                int levelFour;
+                if (level >= 100) {
+                    levelFour = 4;
+//                            imWifi.setImageDrawable(R.drawable.wifi_level_4);//ImageResource(R.id.wifi_level_4);
+                } else if (level >= 75){
+                    levelFour = 3;
+//                            imWifi.setImageResource(R.id.wifi_level_3);
+                } else if (level >= 50){
+                    levelFour = 2;
+//                            imWifi.setImageResource(R.id.wifi_level_2);
+                }else if (level >= 25){
+                    levelFour = 1;
+//                            imWifi.setImageResource(R.id.wifi_level_1);
+                }else{
+                    levelFour = 0;
+                }
+//                Log.d("WIFI","raw:"+levelFour);
+//                String info = "Battery: " + level + "%\n";
+//                info += ("Battery Status: " + getStatusString(status) + "\n");
+//                textBatteryLevel.setText(info);
+//                + "\n\n" + bundle.toString());
+                if(getStatusString(status).equals("Discharging")){
+                    resourceType = getResources().getIdentifier("battery_level__0", "drawable", getPackageName());
+                    Log.d("WIFI","rozlad");
+                }else{
+                    Log.d("WIFI",""+levelFour);
+                    resourceType = getResources().getIdentifier("battery_level_"+levelFour, "drawable", getPackageName());
+                }
+
+            } else {
+//                textBatteryLevel.setText("Battery not present!!!");
+                resourceType = getResources().getIdentifier("battery_level_0", "drawable", getPackageName());
+            }
+            imBattery.setImageResource(resourceType);
+        }
+    };
+
+
+    private String getStatusString(int status) {
+        String statusString = "Unknown";
+
+        switch (status) {
+            case BatteryManager.BATTERY_STATUS_CHARGING:
+                statusString = "Charging";
+                break;
+            case BatteryManager.BATTERY_STATUS_DISCHARGING:
+                statusString = "Discharging";
+                break;
+            case BatteryManager.BATTERY_STATUS_FULL:
+                statusString = "Full";
+                break;
+            case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
+                statusString = "Not Charging";
+                break;
+        }
+
+        return statusString;
+    }
+
+    //GSM
+    public class myPhoneStateListener extends PhoneStateListener {
+        private int signalStrengthValue;
+        private  int level;
+        private  int GSM_SIGNAL_STRENGTH_GREAT = 12;
+        private  int GSM_SIGNAL_STRENGTH_GOOD = 8;
+        private  int GSM_SIGNAL_STRENGTH_MODERATE = 5;
+
+        private  int SIGNAL_STRENGTH_NONE_OR_UNKNOWN = 0;
+        private  int SIGNAL_STRENGTH_POOR = 1;
+        private  int SIGNAL_STRENGTH_MODERATE = 2;
+        private  int SIGNAL_STRENGTH_GOOD = 3;
+        private  int SIGNAL_STRENGTH_GREAT = 4;
+
+        public void onSignalStrengthsChanged(SignalStrength signalStrength) {
+            super.onSignalStrengthsChanged(signalStrength);
+            if (signalStrength.isGsm()) {
+                // ASU ranges from 0 to 31 - TS 27.007 Sec 8.5
+                // asu = 0 (-113dB or less) is very weak
+                // signal, its better to show 0 bars to the user in such cases.
+                // asu = 99 is a special case, where the signal strength is unknown.
+                int asu = signalStrength.getGsmSignalStrength();
+                if (asu <= 2 || asu == 99) level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
+                else if (asu >= GSM_SIGNAL_STRENGTH_GREAT) level = SIGNAL_STRENGTH_GREAT;
+                else if (asu >= GSM_SIGNAL_STRENGTH_GOOD)  level = SIGNAL_STRENGTH_GOOD;
+                else if (asu >= GSM_SIGNAL_STRENGTH_MODERATE)  level = SIGNAL_STRENGTH_MODERATE;
+                else level = SIGNAL_STRENGTH_POOR;
+
+                signalStrengthValue= level;
+                Log.d("GSM","GSM Signal: " + signalStrengthValue);
+            } else {
+                Log.d("GSM","GSM Signal: " + signalStrengthValue);
+                signalStrengthValue = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;// signalStrength.getCdmaDbm();
+            }
+            int resourceType = getResources().getIdentifier("gsm_level_"+signalStrengthValue , "drawable", getPackageName());
+            imGsm.setImageResource(resourceType);
+//            Log.d("GSM","GSM Signal: " + signalStrengthValue);
+        }
+    }
 }
