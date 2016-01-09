@@ -280,6 +280,8 @@ public class MainActivity extends Activity implements View.OnClickListener{
     @Override
     protected void onPause() {
 //        Log.d(TAG,"onPaue-start");
+        imSynchro.setVisibility(View.INVISIBLE);
+        imGsm.setVisibility(View.INVISIBLE);
         unregisterReceiver(receiverWifi);
         unregisterReceiver(battery_receiver);
 

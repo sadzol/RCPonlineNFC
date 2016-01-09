@@ -7,29 +7,29 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
-import android.media.ExifInterface;
+import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.view.TextureView;
+import android.view.TextureView.SurfaceTextureListener;
 import android.view.View;
-import android.view.ViewDebug;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -41,10 +41,6 @@ import android.widget.Toast;
 import com.androidquery.AQuery;
 import com.androidquery.callback.AjaxCallback;
 import com.androidquery.callback.AjaxStatus;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
-import android.location.Location;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -53,6 +49,9 @@ import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListe
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import org.json.JSONObject;
 
 import java.io.File;
@@ -73,7 +72,7 @@ import pl.rcponline.nfc.dao.DAO;
 import pl.rcponline.nfc.dao.EventDAO;
 import pl.rcponline.nfc.model.Event;
 
-public class EventActivity extends Activity implements View.OnClickListener ,ConnectionCallbacks, OnConnectionFailedListener, LocationListener, SurfaceHolder.Callback {
+public class EventActivity2 extends Activity implements View.OnClickListener ,ConnectionCallbacks, OnConnectionFailedListener, LocationListener, SurfaceTextureListener {
 
     private static final String TAG = "EVENT_ACTIVITY";
     AQuery aq;
@@ -94,11 +93,12 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
     LinearLayout llDatatime;
 
     /////CAMERA//////
-    private SurfaceHolder surfaceHolder;
-    private SurfaceView svCameraPreview;
+    private TextureView myTexture;
+//    private SurfaceHolder surfaceHolder;
+//    private SurfaceView svCameraPreview;
     private Camera camera;
-//    SurfaceTexture surfaceTexture;
-//    SurfaceView view;
+    String mCurrentPhotoPath;
+    static final int REQUEST_TAKE_PHOTO = 1;
 
     ///////////////LOCATION///////////////////////////////////////////////////////
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
@@ -131,7 +131,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         }
         //END FULL SCREEN
 
-        setContentView(R.layout.activity_event);
+        setContentView(R.layout.activity_event2);
 
         //Ustawiamy ustawienia domyślnymi warościami z pliku prefernecji (false - tylko raz)
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
@@ -185,8 +185,13 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         //Podglad kamerki
 //        svCameraPreview = (SurfaceView) findViewById(R.id.sv_camera_preview);
 
-//        surfaceTexture = new SurfaceTexture(10);
-//        view = new SurfaceView(this);
+//        myTexture = (TextureView) findViewById(R.id.sv_camera_preview);
+//        myTexture = new TextureView(this);
+//        myTexture.setSurfaceTextureListener(this);
+//        setContentView(myTexture);
+//        myTexture.setAlpha(1.0f);
+//        myTexture.setRotation(90.0f);
+
 
         btStart.setOnClickListener(this);
         btFinish.setOnClickListener(this);
@@ -247,7 +252,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
         //todo ustawic przyciski i odswiezyc eventy
         setButtons();
-        viewLastEvents();
+//        viewLastEvents();
 
         //TODO sprawdzic czy Pole komentarz ma byc widoczne
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
@@ -271,25 +276,14 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         }else {
             rlPayExit.setVisibility(View.GONE);
         }
-
-        if(sp.getBoolean("make_foto",true)){
-
-            if (sp.getBoolean("make_foto_preview",true)){
-                svCameraPreview = (SurfaceView) findViewById(R.id.sv_camera_preview);
-            }else{
-                svCameraPreview = (SurfaceView) findViewById(R.id.sv_camera_preview_1px);
-            }
-            svCameraPreview.setVisibility(View.VISIBLE);
-
-            surfaceHolder = svCameraPreview.getHolder();
-            surfaceHolder.addCallback(this);
-        }else{
-            SurfaceView svCameraPreview1 = (SurfaceView) findViewById(R.id.sv_camera_preview);
-            SurfaceView svCameraPreview2 = (SurfaceView) findViewById(R.id.sv_camera_preview_1px);
-            svCameraPreview1.setVisibility(View.GONE);
-            svCameraPreview2.setVisibility(View.GONE);
-        }
-
+//        surfaceHolder = svCameraPreview.getHolder();
+//        surfaceHolder.addCallback(this);
+//        if (sp.getBoolean("make_foto_preview",true)){
+//            svCameraPreview.setVisibility(View.VISIBLE);
+//
+//        }else{
+//            svCameraPreview.setVisibility(View.INVISIBLE);
+//        }
     }
 
     @Override
@@ -396,10 +390,10 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
     //To umiecic w EVENT.java-nie moge bo po wykonianu  aq.ajax nie bede mial wplywu na UI, a w mainActivity jest wpylyw na modyfikacje UI
     private boolean SendEvent() {
-
+        dispatchTakePictureIntent();
         //SAVE PICTURE
         if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("make_foto",true)){
-            camera.takePicture(null,null,picHandler);
+//            camera.takePicture(null,null,picHandler);
         }
 
 
@@ -501,8 +495,6 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
     private void goToMainActivityWithToast(String error){
 
-
-
         Intent intent = new Intent(getApplicationContext(),MainActivity.class);
         int resourceType = getResources().getIdentifier(String.valueOf(Const.EVENT_TYPE[typeId-1]), "string", getPackageName());
         String msg = context.getString(R.string.event_saved) + " " + context.getString(resourceType).toUpperCase();
@@ -511,7 +503,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             msg = error;
         }
         intent.putExtra("event", msg);
-        startActivity(intent);
+//        startActivity(intent);
         //finish();
     }
 
@@ -919,39 +911,11 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         public void onPictureTaken(byte[] data, Camera camera) {
             Calendar currentDate = Calendar.getInstance();
             String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(currentDate.getTime());
-
-            String event = "";
-            int resourceType = getResources().getIdentifier(String.valueOf(Const.EVENT_TYPE[typeId - 1]), "string", getPackageName());
-            event =  context.getString(resourceType);
-
-            File pictureFile  = new File(Environment.getExternalStorageDirectory().getPath() + "/DCIM/Camera/"+timeStamp+" "+session.getEmployeeName()+" - "+event+".jpg");
+            File pictureFile = new File(Environment.getExternalStorageDirectory().getPath() + "/DCIM/Camera/"+timeStamp+" "+session.getEmployeeName()+".jpg");
 
             try {
-
-                FileOutputStream fos = new FileOutputStream(pictureFile .toString());
-
-                //START OBROT ZDJECIA O 270 stopni
-                Bitmap realImage = BitmapFactory.decodeByteArray(data, 0, data.length);
-
-                ExifInterface exif=new ExifInterface(pictureFile.toString());
-//
-                Log.d("EXIF value", exif.getAttribute(ExifInterface.TAG_ORIENTATION));
-                if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("6")){
-                    Log.d(TAG,"6");
-                    realImage= rotate(realImage, 90);
-                } else if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("8")){
-                    Log.d(TAG,"8");
-                    realImage= rotate(realImage, 270);
-                } else if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("3")){
-                    Log.d(TAG,"3");
-                    realImage= rotate(realImage, 180);
-                } else if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("0")){
-                    Log.d(TAG,"0");//TO JEST WYBIERANE WHY???
-                    realImage= rotate(realImage, 270);
-                }
-
-                boolean bo = realImage.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-                //END obrotu zdjecia
+                FileOutputStream fos = new FileOutputStream(pictureFile.toString());
+//                Bitmap bitmap = (Bitmap) data;
 
                 fos.write(data);
                 fos.close();
@@ -968,44 +932,124 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             }
         }
     };
-    public static Bitmap rotate(Bitmap bitmap, int degree) {
-        int w = bitmap.getWidth();
-        int h = bitmap.getHeight();
+//
+//        @Override
+//        public void surfaceCreated(SurfaceHolder holder) {
+//            camera = Camera.open(1);
+//            camera.setDisplayOrientation(90);
+//            try{
+//                camera.setPreviewDisplay(holder);
+//                camera.startPreview();
+//            }catch (IOException e){
+//                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CREATED : " + e.getMessage());
+//            };
+//        }
+//
+//        @Override
+//        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+//            try{
+//                camera.setPreviewDisplay(holder);
+//                camera.startPreview();
+//            }catch (IOException e){
+//                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CHANGED : " + e.getMessage());
+//            }
+//
+//        }
+//
+//        @Override
+//        public void surfaceDestroyed(SurfaceHolder holder) {
+//            camera.stopPreview();
+//            camera.release();
+//            camera = null;
+//        }
 
-        Matrix mtx = new Matrix();
-        mtx.postRotate(degree);
-
-        return Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, true);
-    }
     @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-            camera = Camera.open(1);
-            camera.setDisplayOrientation(90);
-            try{
+    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+        camera = Camera.open();
+        Camera.Size previewSize = camera.getParameters().getPreviewSize();
 
-//                camera.setPreviewDisplay(view.getHolder());
-                camera.setPreviewDisplay(holder);
-                camera.startPreview();
-            }catch (IOException e){
-                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CREATED : " + e.getMessage());
-            };
+        myTexture.setLayoutParams(new FrameLayout.LayoutParams(
+                previewSize.width, previewSize.height, Gravity.CENTER));
+
+        try {
+            camera.setPreviewTexture(surface);
+        }
+
+        catch (IOException t) {
+        }
+        camera.startPreview();
+        myTexture.setAlpha(1.0f);
+        myTexture.setRotation(90.0f);
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            try{
-//                camera.setPreviewDisplay(view.getHolder());
-                camera.setPreviewDisplay(holder);
-                camera.startPreview();
-            }catch (IOException e){
-                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CHANGED : " + e.getMessage());
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+    }
+
+    @Override
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        camera.stopPreview();
+        camera.release();
+        return true;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
+    }
+
+
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = "file:" + image.getAbsolutePath();
+        return image;
+    }
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+
             }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+                        Uri.fromFile(photoFile));
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
+        }
     }
-
+    private void galleryAddPic() {
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        File f = new File(mCurrentPhotoPath);
+        Uri contentUri = Uri.fromFile(f);
+        mediaScanIntent.setData(contentUri);
+        this.sendBroadcast(mediaScanIntent);
+    }
     @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-            camera.stopPreview();
-            camera.release();
-            camera = null;
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
+            Log.d(TAG, "SAVE FILE :)");
+//            Bundle extras = data.getExtras();
+//            Bitmap imageBitmap = (Bitmap) extras.get("data");
+//            mImageView.setImageBitmap(imageBitmap);
+        }
     }
 }

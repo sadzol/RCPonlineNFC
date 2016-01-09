@@ -232,10 +232,18 @@
         android:gravity="right"
         >
         <SurfaceView
+            android:id="@+id/sv_camera_preview_1px"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            />
+        <SurfaceView
             android:id="@+id/sv_camera_preview"
-            android:layout_width="300dp"
+            android:layout_width="225dp"
             android:layout_height="300dp"
             android:layout_gravity="bottom"
+            android:visibility="gone"
             />
         <!--<ImageView-->
             <!--android:id="@+id/iv_make_photo_preview"-->
