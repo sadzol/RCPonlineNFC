@@ -478,10 +478,8 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
                     saveEventToLocalDatabase(typeId, data, location, comment, isEventSend, error);
 
-                    //setButtons();
-                    //viewLastEvents();
                     goToMainActivityWithToast(error);
-//                    finish();
+
                 }
             });
 
@@ -490,8 +488,6 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             Log.d(TAG, "INTERNET-OFF");
             saveEventToLocalDatabase(typeId, data, location, comment,isEventSend,"");
 
-            //setButtons();
-            //viewLastEvents();
             goToMainActivityWithToast(null);
 //            finish();
         }
@@ -500,8 +496,6 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
     }
 
     private void goToMainActivityWithToast(String error){
-
-
 
         Intent intent = new Intent(getApplicationContext(),MainActivity.class);
         int resourceType = getResources().getIdentifier(String.valueOf(Const.EVENT_TYPE[typeId-1]), "string", getPackageName());
