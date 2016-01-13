@@ -441,7 +441,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             params.put(Const.EMPLOYEE_ID_API_KEY, session.getEmployeeId());
             params.put(Const.DEVICE_CODE_API_KEY, session.getDeviceCode());
 
-            Log.d(TAG, "API SEND: login=" + session.getLogin() + ", pass=" + session.getPassword() + ", typeId=" + typeId + ", sourceId=" + Const.SOURCE_ID + ", datatime=" + data + ", id=" + session.getIdentificator() + ", employeeId=" + session.getEmployeeId() + ", device_code=" + session.getDeviceCode());
+            Log.d(TAG, "API SEND: login=" + session.getLogin() + ", pass=" + session.getPassword() + ", typeId=" + typeId + ", sourceId=" + Const.SOURCE_ID + ", datatime=" + data + ", id=" + session.getIdentificator() + ", employeeId=" + session.getEmployeeId() + ", device_code=" + session.getDeviceCode()+ ", location=" + location);
 
             ProgressDialog dialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_DARK);
             dialog.setIndeterminate(true);
@@ -472,12 +472,13 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
                     } else {
                         Log.i(TAG, "no json");
                         //message = "Error:" + getString(R.string.no_connection) + "( " + status.getCode() + " )";// + json.optString("login");
-                        error = "BLAD! Polaczenie: " + status.getMessage();
+
+                        //NIE POKAZUJEMY BLEDU JESLI SERVER NIE ODPOWIADA
+//                        error = "BLAD! Polaczenie: " + status.getMessage();
 //                        Toast.makeText(getApplicationContext(), getString(R.string.no_connection), Toast.LENGTH_LONG).show();
                     }
 
                     saveEventToLocalDatabase(typeId, data, location, comment, isEventSend, error);
-
                     goToMainActivityWithToast(error);
 
                 }
@@ -687,71 +688,83 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if(cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected()) {
 
-            EventDAO eventDAO = new EventDAO(context);
-            List<Event> events = eventDAO.getEventsWithStatus(0);
+            SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+            SharedPreferences.Editor editor = pref.edit();
 
-            ProgressDialog dialog = new ProgressDialog(context,ProgressDialog.THEME_HOLO_DARK);
-            dialog.setIndeterminate(true);
-            dialog.setCancelable(true);
-            dialog.setInverseBackgroundForced(false);
-            dialog.setCanceledOnTouchOutside(true);
-            dialog.setMessage(context.getString(R.string.synchronized_with_server));
+            if(!session.getIsSynchroNow()) {
+                session.setIsSynchroNow(true);
 
-            //jeśli są to wysyłamy eventy ze statusem 0
-            Gson g = new Gson();
-            Type type = new TypeToken<List<Event>>() {}.getType();
-            String eventsString = g.toJson(events, type);
-            Log.d(TAG, eventsString);
-            HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
-            SessionManager session = new SessionManager(context);
+                EventDAO eventDAO = new EventDAO(context);
+                List<Event> events = eventDAO.getEventsWithStatus(0);
 
-            eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
-            eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
-            eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
-            Log.d(TAG, eventsJSONObject.toString());
+                ProgressDialog dialog = new ProgressDialog(context, ProgressDialog.THEME_HOLO_DARK);
+                dialog.setIndeterminate(true);
+                dialog.setCancelable(true);
+                dialog.setInverseBackgroundForced(false);
+                dialog.setCanceledOnTouchOutside(true);
+                dialog.setMessage(context.getString(R.string.synchronized_with_server));
 
-            AQuery aq = new AQuery(context);
-            String url = Const.ADD_EVENTS_URL;
-            aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
-                @Override
-                public void callback(String url, JSONObject json, AjaxStatus status) {
-                    String message = "";
+                //jeśli są to wysyłamy eventy ze statusem 0
+                Gson g = new Gson();
+                Type type = new TypeToken<List<Event>>() {
+                }.getType();
+                String eventsString = g.toJson(events, type);
+                Log.d(TAG, eventsString);
+                HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
+                final SessionManager session = new SessionManager(context);
 
-                    if (json != null) {
-                        if (json.optBoolean("success") == true) {
-                            Log.d(TAG, "success: true");
-                            DAO.saveAllDataFromServer(json, context);
+                eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
+                eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
+                eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
+                Log.d(TAG, eventsJSONObject.toString());
 
-                            viewLastEvents();
-                            setButtons();
+                AQuery aq = new AQuery(context);
+                String url = Const.ADD_EVENTS_URL;
+                aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
+                    @Override
+                    public void callback(String url, JSONObject json, AjaxStatus status) {
+                        String message = "";
 
-                        }else{
-                            Log.d(TAG, "success: false");
-                            message = json.optString("message");
-                        }
-                    } else {
-                        Log.d(TAG, "success - no json");
-                        //TODO co z tymi errorami zrobic???
-                        //Kiedy kod 500( Internal Server Error)
-                        if (status.getCode() == 500) {
-                            message = context.getString(R.string.error_500);
+                        if (json != null) {
+                            if (json.optBoolean("success") == true) {
+                                Log.d(TAG, "success: true");
+                                DAO.saveAllDataFromServer(json, context);
 
-                            //Błąd 404 (Not found)
-                        } else if (status.getCode() == 404) {
-                            message = context.getString(R.string.error_404);
+                                viewLastEvents();
+                                setButtons();
 
-                            //500 lub 404
+                            } else {
+                                Log.d(TAG, "success: false");
+                                message = json.optString("message");
+                            }
                         } else {
-                            message = context.getString(R.string.error_unexpected);
-                        }
-                    }
+                            Log.d(TAG, "success - no json");
+                            //TODO co z tymi errorami zrobic???
+                            //Kiedy kod 500( Internal Server Error)
+                            if (status.getCode() == 500) {
+                                message = context.getString(R.string.error_500);
 
-                    if(message != ""){
-                        Toast.makeText(getApplicationContext(),message,Toast.LENGTH_SHORT).show();
+                                //Błąd 404 (Not found)
+                            } else if (status.getCode() == 404) {
+                                message = context.getString(R.string.error_404);
+
+                                //500 lub 404
+                            } else {
+                                //Glownie serwer nie odpowiada
+//                            message = String.valueOf(status.getCode())+" "+context.getString(R.string.error_unexpected);
+                                message = context.getString(R.string.error_unexpected);
+                            }
+                        }
+
+                        if (message != "") {
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+                        }
+                        Log.i(TAG, message);
+
+                        session.setIsSynchroNow(false);
                     }
-                    Log.i(TAG, message);
-                }
-            });
+                });
+            }
 //            setButtons();
 //            viewLastEvents();
         }else{
@@ -759,6 +772,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         }
     }
 
+    ///////////////////////////////////
     /////////LOCATION//////////////////
 
     /**
@@ -839,6 +853,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         mLastLocation = location;
 
     }
+    //////END LOCATION //////////////////////////////////
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {

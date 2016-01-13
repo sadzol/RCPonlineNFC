@@ -381,61 +381,74 @@ public class MainActivity extends Activity implements View.OnClickListener{
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if(cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected()) {
 
-            EventDAO eventDAO = new EventDAO(context);
-            List<Event> events = eventDAO.getEventsWithStatus(0);
+            if(!session.getIsSynchroNow()) {
+                session.setIsSynchroNow(true);
 
-            ProgressDialog dialog = new ProgressDialog(context,ProgressDialog.THEME_HOLO_DARK);
-            dialog.setIndeterminate(true);
-            dialog.setCancelable(true);
-            dialog.setInverseBackgroundForced(false);
-            dialog.setCanceledOnTouchOutside(true);
-            dialog.setMessage(context.getString(R.string.synchronized_with_server));
+                EventDAO eventDAO = new EventDAO(context);
+                List<Event> events = eventDAO.getEventsWithStatus(0);
 
-            //jesli sa to wysylamy eventy ze statusem 0
-            Gson g = new Gson();
-            Type type = new TypeToken<List<Event>>() {}.getType();
-            String eventsString = g.toJson(events, type);
-            Log.d(TAG, eventsString);
-            HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
+                ProgressDialog dialog = new ProgressDialog(context, ProgressDialog.THEME_HOLO_DARK);
+                dialog.setIndeterminate(true);
+                dialog.setCancelable(true);
+                dialog.setInverseBackgroundForced(false);
+                dialog.setCanceledOnTouchOutside(true);
+                dialog.setMessage(context.getString(R.string.synchronized_with_server));
+
+                //jesli sa to wysylamy eventy ze statusem 0
+                Gson g = new Gson();
+                Type type = new TypeToken<List<Event>>() {
+                }.getType();
+                String eventsString = g.toJson(events, type);
+                Log.d(TAG, eventsString);
+                HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
 //            HashMap<String, Object> eventsJSONObject = new HashMap<>();
-            SessionManager session = new SessionManager(context);
+                SessionManager session = new SessionManager(context);
 
-            eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
-            eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
-            eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
-            Log.d(TAG, eventsJSONObject.toString());
+                eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
+                eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
+                eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
+                Log.d(TAG, eventsJSONObject.toString());
 
-            AQuery aq = new AQuery(context);
-            String url = Const.ADD_EVENTS_URL;
-            aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
-                @Override
-                public void callback(String url, JSONObject json, AjaxStatus status) {
-                    String message = "";
+                AQuery aq = new AQuery(context);
+                String url = Const.ADD_EVENTS_URL;
+                aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
+                    @Override
+                    public void callback(String url, JSONObject json, AjaxStatus status) {
+                        String message = "";
 
-                    if (json != null) {
-                        //zmienna succes moze byc albo true albo false
-                        if (json.optBoolean("success")) {
-                            DAO.saveAllDataFromServer(json, context);
+                        if (json != null) {
+                            //zmienna succes moze byc albo true albo false
+                            if (json.optBoolean("success") == true) {
+                                DAO.saveAllDataFromServer(json, context);
 
-                        }
-                    } else {
-                        //TODO co z tymi errorami zrobic???
-                        //Kiedy kod 500( Internal Server Error)
-                        if (status.getCode() == 500) {
-                            message = context.getString(R.string.error_500);
-
-                            //Blad 404 (Not found)
-                        } else if (status.getCode() == 404) {
-                            message = context.getString(R.string.error_404);
-
-                            //500 lub 404
+                            } else {
+                                Log.d(TAG, "success: false");
+                                message = json.optString("message");
+                            }
                         } else {
-                            message = context.getString(R.string.error_unexpected);
+                            //TODO co z tymi errorami zrobic???
+                            //Kiedy kod 500( Internal Server Error)
+                            if (status.getCode() == 500) {
+                                message = context.getString(R.string.error_500);
+
+                                //Blad 404 (Not found)
+                            } else if (status.getCode() == 404) {
+                                message = context.getString(R.string.error_404);
+
+                                //500 lub 404
+                            } else {
+                                message = context.getString(R.string.error_unexpected);
+                            }
+                        }
+                        Log.i(TAG, message);
+                        if (message != "") {
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
                         }
                     }
-                    Log.i(TAG, message);
-                }
-            });
+                });
+
+                session.setIsSynchroNow(false);
+            }
         }else{
             Toast.makeText(this, getString(R.string.synchronized_off), Toast.LENGTH_LONG).show();
         }
@@ -452,7 +465,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
 
-        Log.d(TAG,"KEY");
+        Log.d(TAG, "KEY");
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             //preventing default implementation previous to android.os.Build.VERSION_CODES.ECLAIR
             //Toast.makeText(this,"Back",Toast.LENGTH_SHORT).show();

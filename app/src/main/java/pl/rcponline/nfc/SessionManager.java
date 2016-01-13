@@ -10,10 +10,10 @@ import java.util.Random;
 public class SessionManager {
 
     //private static final String TAG = "SESSION_MANAGER";
-    private static final String PREF_NAME = "RCP_NFC_PREF_SESSION";
+//    private static final String PREF_NAME = "RCP_NFC_PREF_SESSION";
     private static final String ALLOWED_CHARACTERS ="0123456789qwertyuiopasdfghjklzxcvbnm";
     //SharedPreference Mode
-    private int PREF_MODE = 0;
+//    private int PREF_MODE = 0;
 
     private SharedPreferences pref;
     private SharedPreferences.Editor editor;
@@ -21,7 +21,7 @@ public class SessionManager {
 
     public SessionManager(Context context){
         this.context = context;
-        pref = context.getSharedPreferences(PREF_NAME, PREF_MODE);
+        pref = context.getSharedPreferences(Const.PREF_NAME, Const.PREF_MODE);
         editor = pref.edit();
     }
 
@@ -39,7 +39,7 @@ public class SessionManager {
         return pref.getString(Const.PREF_LOGIN,"");
     }
     public String getPassword(){
-        return pref.getString(Const.PREF_PASS,"");
+        return pref.getString(Const.PREF_PASS, "");
     }
 
     public void setEmployeeId(long id){
@@ -95,7 +95,7 @@ public class SessionManager {
             setDeviceCode();
         }
 
-        return pref.getString(Const.PREF_DEVICE_CODE,"");
+        return pref.getString(Const.PREF_DEVICE_CODE, "");
     }
 
     public void addMessage(String message){
@@ -171,5 +171,14 @@ public class SessionManager {
         for(int i=0;i<sizeOfRandomString;++i)
             sb.append(ALLOWED_CHARACTERS.charAt(random.nextInt(ALLOWED_CHARACTERS.length())));
         return sb.toString();
+    }
+
+
+    public void setIsSynchroNow(boolean isSynchro){
+        editor.putBoolean(Const.PREF_IS_SYNCHRONISATION_NOW, isSynchro);
+        editor.apply();
+    }
+    public boolean getIsSynchroNow(){
+        return pref.getBoolean(Const.PREF_IS_SYNCHRONISATION_NOW, false);
     }
 }

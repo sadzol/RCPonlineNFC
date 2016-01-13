@@ -143,7 +143,6 @@ public class LoginActivity extends Activity {
 //                            }";
 //                            DBHelper dbHelper = new DBHelper();
 
-
                             DAO.saveAllDataFromServer(json,getApplicationContext());
 
                             Intent intent = new Intent(LoginActivity.this,MainActivity.class);
@@ -157,13 +156,25 @@ public class LoginActivity extends Activity {
 
                         //Toast.makeText(getApplicationContext(), status.getCode() + ":" + json.optString("user"), Toast.LENGTH_LONG).show();
                     }else{
-                        Log.d(TAG, "errors;");
+
                         String error;
-                        if(status.getCode() == -101 ){
+                        //Kiedy kod 500( Internal Server Error)
+                        if (status.getCode() == 500) {
+                            error = getString(R.string.error_500);
+
+                            //Błąd 404 (Not found)
+                        } else if (status.getCode() == 404) {
+                            error = getString(R.string.error_404);
+
+                            //Blad -101 Moze oznaczac: Serwer nie odpowiada
+                        } else if(status.getCode() == -101 ){
                             error = getString(R.string.error_offline);
+
+                            //500 lub 404
                         }else{
                             error = getString(R.string.error_unexpected);
                         }
+                        Log.d(TAG, error);
                         Toast.makeText(getApplicationContext(), error, Toast.LENGTH_LONG).show();
                     }
             }
