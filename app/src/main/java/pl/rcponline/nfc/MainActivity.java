@@ -3,21 +3,26 @@ package pl.rcponline.nfc;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.hardware.SensorManager;
 import android.net.ConnectivityManager;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.os.BatteryManager;
 import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.SignalStrength;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.View;
 import android.view.Window;
@@ -57,10 +62,11 @@ public class MainActivity extends Activity implements View.OnClickListener{
     Runnable myRunnableThread;
     SessionManager session;
     Context context;
-    ImageView imSynchro;
-    private Handler mHandler = new Handler();
-    OrientationEventListener orientationListener;
+    ImageView imSynchro,imWifi,imBattery,imGsm;
 
+    WifiReceiver receiverWifi;
+    TelephonyManager telephonyManager;
+    myPhoneStateListener psListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,15 +78,21 @@ public class MainActivity extends Activity implements View.OnClickListener{
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         //END FULL SCREEN
 
-        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
-        int rotation = display.getRotation();
-        if(rotation == Surface.ROTATION_180){
-            Log.d("ORI","180");
-        }else{
-            Log.d("ORI","0");
-        }
-//        Toast.makeText(context,rotation,Toast.LENGTH_LONG).show();
-        //Log.d("ORI",String.valueOf(rotation));
+////        //GSM
+//        imGsm     = (ImageView) findViewById(R.id.im_gsm);
+//        psListener = new myPhoneStateListener();
+//        telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+
+        //Ustawienie layout w zaleznosci od pionowego polozenia
+//        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+//        int rotation = display.getRotation();
+//        if(rotation == Surface.ROTATION_180){
+//            setContentView(R.layout.activity_main);
+//        }else{
+//            setContentView(R.layout.activity_main_revers);
+//        }
+//        //END
+
         //DISABLE NAVIGATION BAR
         View decorView = getWindow().getDecorView();
         int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN;
@@ -118,26 +130,24 @@ public class MainActivity extends Activity implements View.OnClickListener{
             }
         }
 
-        imSynchro = (ImageView) findViewById(R.id.im_synchronized_main);
-        imSynchro.setOnClickListener(this);
+////        //GSM
+//        imGsm     = (ImageView) findViewById(R.id.im_gsm);
+//        psListener = new myPhoneStateListener();
+//        telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
 
-        orientationListener = new OrientationEventListener(context, SensorManager.SENSOR_DELAY_UI) {
-            public void onOrientationChanged(int orientation) {
-                Log.d("ORI",String.valueOf(orientation));
-//            if(canShow(orientation)){
-//                show();
-//            } else if(canDismiss(orientation)){
-//                dismiss();
+//        orientationListener = new OrientationEventListener(context, SensorManager.SENSOR_DELAY_UI) {
+//            public void onOrientationChanged(int orientation) {
+//                Log.d("1ORI",String.valueOf(orientation));
+////            if(canShow(orientation)){
+////                show();
+////            } else if(canDismiss(orientation)){
+////                dismiss();
+////            }
 //            }
-            }
-        };
+//        };
         //reactOnTag("ds32rgf");
     }
 
-
-    public void onConfigurationChanged(){
-        Log.d("ORI","jj");
-    }
     //COS Z UKRYWANEIM
 //    private Runnable decor_view_settings = new Runnable()
 //    {
@@ -168,7 +178,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
         Log.d(TAG, tagId);
 
         super.onNewIntent(intent);
-
         reactOnTag(tagId);
     }
 
@@ -190,13 +199,13 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 session.setEmployeePermission(emp.getPermission());
                 session.setIdentificator(tagId);
 
-                EventDAO eventDAO = new EventDAO(getApplicationContext());
-                Event event = eventDAO.getLastEventOfEmployee(emp.getId());
-                if(event != null){
-                    session.setLastEventTypeId(event.getType());
-                }else{
-                    session.setLastEventTypeId(6);
-                }
+//                EventDAO eventDAO = new EventDAO(getApplicationContext());
+//                Event event = eventDAO.getLastEventOfEmployee(emp.getId());
+//                if(event != null){
+//                    session.setLastEventTypeId(event.getType());
+//                }else{
+//                    session.setLastEventTypeId(6);
+//                }
 
                 Intent intentNew = new Intent(getApplicationContext(), EventActivity.class);
                 startActivity(intentNew);
@@ -216,9 +225,8 @@ public class MainActivity extends Activity implements View.OnClickListener{
             Log.d(TAG, "synchronized");
             synchronizedWithServer();
         }
-
-
     }
+
     @Override
     protected void onResume() {
 
@@ -234,21 +242,54 @@ public class MainActivity extends Activity implements View.OnClickListener{
         }else{
             //Toast.makeText(this,R.string.nfc_disabled,Toast.LENGTH_LONG).show();
         }
-        Log.d("ORI", "r");
-//        orientationListener.enable();
+
+        //Reaguje na zmiane ustawienia pionowego czytnika
+        Display display = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+        int rotation = display.getRotation();
+        if(rotation == Surface.ROTATION_180){
+            setContentView(R.layout.activity_main);
+        }else{
+            setContentView(R.layout.activity_main_revers);
+        }
+        imSynchro = (ImageView) findViewById(R.id.im_synchronized_main);
+        imSynchro.setOnClickListener(this);
+
+        //WIFI STRONG SIGNAL
+        imWifi = (ImageView) findViewById(R.id.im_wifi);
+        receiverWifi = new WifiReceiver();
+        registerReceiver(receiverWifi, new IntentFilter(WifiManager.RSSI_CHANGED_ACTION));
+
+        //Battery
+        imBattery = (ImageView) findViewById(R.id.im_battery);
+        registerReceiver(battery_receiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+
+
+
+        //END
         super.onResume();
+
+        //        //GSM
+        imGsm     = (ImageView) findViewById(R.id.im_gsm);
+        psListener = new myPhoneStateListener();
+        telephonyManager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+
+        //GSM SIGNAL
+        telephonyManager.listen(psListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
     }
 
     @Override
     protected void onPause() {
-
+//        Log.d(TAG,"onPaue-start");
+        imSynchro.setVisibility(View.INVISIBLE);
+        imGsm.setVisibility(View.INVISIBLE);
+        unregisterReceiver(receiverWifi);
+        unregisterReceiver(battery_receiver);
 
         if(nfcAdapter != null) {
             nfcAdapter.disableForegroundDispatch(this);
         }
-
-//        orientationListener.disable();
         super.onPause();
+//        Log.d(TAG, "onPaue-endm");
     }
 
     @Override
@@ -260,7 +301,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
         return super.onCreateOptionsMenu(menu);
     }
 
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
@@ -269,7 +309,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
 //                DAO.synchronizedWithServer(getApplicationContext());
                 synchronizedWithServer();
                 return true;
-
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -285,16 +324,33 @@ public class MainActivity extends Activity implements View.OnClickListener{
                     TextView txtCurrentTime = (TextView) findViewById(R.id.tv_time);
                     TextView txtCurrentDate = (TextView) findViewById(R.id.tv_date);
                     Date dt = new Date();
-                    //int hours = dt.getHours();
-                    //int minutes = dt.getMinutes();
-                    //int seconds = dt.getSeconds();
                     //String curTime = hours + ":" + minutes + ":" + seconds;
+
+
+                    //PROBLEM Z MIGAJACYM :  jest taki ze pusty znak i : maja rozne szerokosci
+//                    SimpleDateFormat dfHours = new SimpleDateFormat("HH");
+//                    SimpleDateFormat dfMinutes = new SimpleDateFormat("mm");
+//                    SimpleDateFormat dfSeconds = new SimpleDateFormat("ss");
+//
+//                    String seconds = dfSeconds.format(dt.getTime());
+//                    String minutes = dfMinutes.format(dt.getTime());
+//                    String hours   = dfHours.format(dt.getTime());
+//
+//                    Log.d("CLOCK",seconds);
+//
+//                    String curTime = "";
+//                    if((Integer.valueOf(seconds) % 2) == 0){
+//                        curTime = hours + "_" + minutes;
+//                    }else{
+//                        curTime = hours + ":" + minutes;
+//                    }
+
+
                     SimpleDateFormat dfTime = new SimpleDateFormat("HH:mm");
                     String curTime = dfTime.format(dt.getTime());
 
                     SimpleDateFormat dfDate = new SimpleDateFormat("dd.MM.yyyy");
                     String curDate = dfDate.format(dt.getTime());
-                    //String curTime = String.valueOf(dt.getTime());
                     txtCurrentTime.setText(curTime);
                     txtCurrentDate.setText(curDate);
 
@@ -325,61 +381,74 @@ public class MainActivity extends Activity implements View.OnClickListener{
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if(cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected()) {
 
-            EventDAO eventDAO = new EventDAO(context);
-            List<Event> events = eventDAO.getEventsWithStatus(0);
+            if(!session.getIsSynchroNow()) {
+                session.setIsSynchroNow(true);
 
-            ProgressDialog dialog = new ProgressDialog(context,ProgressDialog.THEME_HOLO_DARK);
-            dialog.setIndeterminate(true);
-            dialog.setCancelable(true);
-            dialog.setInverseBackgroundForced(false);
-            dialog.setCanceledOnTouchOutside(true);
-            dialog.setMessage(context.getString(R.string.synchronized_with_server));
+                EventDAO eventDAO = new EventDAO(context);
+                List<Event> events = eventDAO.getEventsWithStatus(0);
 
-            //jesli sa to wysylamy eventy ze statusem 0
-            Gson g = new Gson();
-            Type type = new TypeToken<List<Event>>() {}.getType();
-            String eventsString = g.toJson(events, type);
-            Log.d(TAG, eventsString);
-            HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
+                ProgressDialog dialog = new ProgressDialog(context, ProgressDialog.THEME_HOLO_DARK);
+                dialog.setIndeterminate(true);
+                dialog.setCancelable(true);
+                dialog.setInverseBackgroundForced(false);
+                dialog.setCanceledOnTouchOutside(true);
+                dialog.setMessage(context.getString(R.string.synchronized_with_server));
+
+                //jesli sa to wysylamy eventy ze statusem 0
+                Gson g = new Gson();
+                Type type = new TypeToken<List<Event>>() {
+                }.getType();
+                String eventsString = g.toJson(events, type);
+                Log.d(TAG, eventsString);
+                HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
 //            HashMap<String, Object> eventsJSONObject = new HashMap<>();
-            SessionManager session = new SessionManager(context);
+                SessionManager session = new SessionManager(context);
 
-            eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
-            eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
-            eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
-            Log.d(TAG, eventsJSONObject.toString());
+                eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
+                eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
+                eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
+                Log.d(TAG, eventsJSONObject.toString());
 
-            AQuery aq = new AQuery(context);
-            String url = Const.ADD_EVENTS_URL;
-            aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
-                @Override
-                public void callback(String url, JSONObject json, AjaxStatus status) {
-                    String message = "";
+                AQuery aq = new AQuery(context);
+                String url = Const.ADD_EVENTS_URL;
+                aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
+                    @Override
+                    public void callback(String url, JSONObject json, AjaxStatus status) {
+                        String message = "";
 
-                    if (json != null) {
-                        //zmienna succes moze byc albo true albo false
-                        if (json.optBoolean("success")) {
-                            DAO.saveAllDataFromServer(json, context);
+                        if (json != null) {
+                            //zmienna succes moze byc albo true albo false
+                            if (json.optBoolean("success") == true) {
+                                DAO.saveAllDataFromServer(json, context);
 
-                        }
-                    } else {
-                        //TODO co z tymi errorami zrobic???
-                        //Kiedy kod 500( Internal Server Error)
-                        if (status.getCode() == 500) {
-                            message = context.getString(R.string.error_500);
-
-                            //Blad 404 (Not found)
-                        } else if (status.getCode() == 404) {
-                            message = context.getString(R.string.error_404);
-
-                            //500 lub 404
+                            } else {
+                                Log.d(TAG, "success: false");
+                                message = json.optString("message");
+                            }
                         } else {
-                            message = context.getString(R.string.error_unexpected);
+                            //TODO co z tymi errorami zrobic???
+                            //Kiedy kod 500( Internal Server Error)
+                            if (status.getCode() == 500) {
+                                message = context.getString(R.string.error_500);
+
+                                //Blad 404 (Not found)
+                            } else if (status.getCode() == 404) {
+                                message = context.getString(R.string.error_404);
+
+                                //500 lub 404
+                            } else {
+                                message = context.getString(R.string.error_unexpected);
+                            }
+                        }
+                        Log.i(TAG, message);
+                        if (message != "") {
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
                         }
                     }
-                    Log.i(TAG, message);
-                }
-            });
+                });
+
+                session.setIsSynchroNow(false);
+            }
         }else{
             Toast.makeText(this, getString(R.string.synchronized_off), Toast.LENGTH_LONG).show();
         }
@@ -396,7 +465,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
 
-        Log.d(TAG,"KEY");
+        Log.d(TAG, "KEY");
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             //preventing default implementation previous to android.os.Build.VERSION_CODES.ECLAIR
             //Toast.makeText(this,"Back",Toast.LENGTH_SHORT).show();
@@ -418,4 +487,160 @@ public class MainActivity extends Activity implements View.OnClickListener{
         return super.onKeyDown(keyCode, event);
     }
 
+    class WifiReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            final WifiManager wifi = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            int state = wifi.getWifiState();
+            if (state == WifiManager.WIFI_STATE_ENABLED) {
+//                Log.d("WIFI", "wifi=on");
+//                tvWifiStatus.setText("WIFI = ON");
+                List<ScanResult> results = wifi.getScanResults();
+
+                for (ScanResult result : results) {
+                    if (result.BSSID.equals(wifi.getConnectionInfo().getBSSID())) {
+                        int level = WifiManager.calculateSignalLevel(wifi.getConnectionInfo().getRssi(), result.level);
+                        int difference = level * 100 / result.level;
+                        int signalStrangth = 0;
+                        if (difference >= 100) {
+                            signalStrangth = 4;
+//                            imWifi.setImageDrawable(R.drawable.wifi_level_4);//ImageResource(R.id.wifi_level_4);
+                        } else if (difference >= 75){
+                            signalStrangth = 3;
+//                            imWifi.setImageResource(R.id.wifi_level_3);
+                        } else if (difference >= 50){
+                            signalStrangth = 2;
+//                            imWifi.setImageResource(R.id.wifi_level_2);
+                        }else if (difference >= 25){
+                            signalStrangth = 1;
+//                            imWifi.setImageResource(R.id.wifi_level_1);
+                        }
+                        int resourceType = getResources().getIdentifier("wifi_level_" + signalStrangth, "drawable", getPackageName());
+                        imWifi.setImageResource(resourceType);
+                        Log.d("WIFI", "Difference :" + difference + " signal state:" + signalStrangth);
+                    }
+                }
+            }else{
+//                Log.d("WIFI", "wifi=on");
+                int resourceType = getResources().getIdentifier("wifi_level_0", "drawable", getPackageName());
+                imWifi.setImageResource(resourceType);
+            }
+
+        }
+    }
+    private BroadcastReceiver battery_receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            boolean isPresent = intent.getBooleanExtra("present", false);
+            int scale = intent.getIntExtra("scale", -1);
+            int status = intent.getIntExtra("status", 0);
+            int rawlevel = intent.getIntExtra("level", -1);
+            int level = 0;
+            int resourceType;
+
+            if (isPresent) {
+                if (rawlevel >= 0 && scale > 0) {
+                    level = (rawlevel * 100) / scale;
+                }
+
+                int levelFour;
+                if (level >= 100) {
+                    levelFour = 4;
+//                            imWifi.setImageDrawable(R.drawable.wifi_level_4);//ImageResource(R.id.wifi_level_4);
+                } else if (level >= 75){
+                    levelFour = 3;
+//                            imWifi.setImageResource(R.id.wifi_level_3);
+                } else if (level >= 50){
+                    levelFour = 2;
+//                            imWifi.setImageResource(R.id.wifi_level_2);
+                }else if (level >= 25){
+                    levelFour = 1;
+//                            imWifi.setImageResource(R.id.wifi_level_1);
+                }else{
+                    levelFour = 0;
+                }
+//                Log.d("WIFI","raw:"+levelFour);
+//                String info = "Battery: " + level + "%\n";
+//                info += ("Battery Status: " + getStatusString(status) + "\n");
+//                textBatteryLevel.setText(info);
+//                + "\n\n" + bundle.toString());
+                if(getStatusString(status).equals("Discharging")){
+                    resourceType = getResources().getIdentifier("battery_level__0", "drawable", getPackageName());
+                    Log.d("WIFI","rozlad");
+                }else{
+                    Log.d("WIFI",""+levelFour);
+                    resourceType = getResources().getIdentifier("battery_level_"+levelFour, "drawable", getPackageName());
+                }
+
+            } else {
+//                textBatteryLevel.setText("Battery not present!!!");
+                resourceType = getResources().getIdentifier("battery_level_0", "drawable", getPackageName());
+            }
+            imBattery.setImageResource(resourceType);
+        }
+    };
+
+
+    private String getStatusString(int status) {
+        String statusString = "Unknown";
+
+        switch (status) {
+            case BatteryManager.BATTERY_STATUS_CHARGING:
+                statusString = "Charging";
+                break;
+            case BatteryManager.BATTERY_STATUS_DISCHARGING:
+                statusString = "Discharging";
+                break;
+            case BatteryManager.BATTERY_STATUS_FULL:
+                statusString = "Full";
+                break;
+            case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
+                statusString = "Not Charging";
+                break;
+        }
+
+        return statusString;
+    }
+
+    //GSM
+    public class myPhoneStateListener extends PhoneStateListener {
+        private int signalStrengthValue;
+        private  int level;
+        private  int GSM_SIGNAL_STRENGTH_GREAT = 12;
+        private  int GSM_SIGNAL_STRENGTH_GOOD = 8;
+        private  int GSM_SIGNAL_STRENGTH_MODERATE = 5;
+
+        private  int SIGNAL_STRENGTH_NONE_OR_UNKNOWN = 0;
+        private  int SIGNAL_STRENGTH_POOR = 1;
+        private  int SIGNAL_STRENGTH_MODERATE = 2;
+        private  int SIGNAL_STRENGTH_GOOD = 3;
+        private  int SIGNAL_STRENGTH_GREAT = 4;
+
+        public void onSignalStrengthsChanged(SignalStrength signalStrength) {
+            super.onSignalStrengthsChanged(signalStrength);
+            if (signalStrength.isGsm()) {
+                // ASU ranges from 0 to 31 - TS 27.007 Sec 8.5
+                // asu = 0 (-113dB or less) is very weak
+                // signal, its better to show 0 bars to the user in such cases.
+                // asu = 99 is a special case, where the signal strength is unknown.
+                int asu = signalStrength.getGsmSignalStrength();
+                if (asu <= 2 || asu == 99) level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
+                else if (asu >= GSM_SIGNAL_STRENGTH_GREAT) level = SIGNAL_STRENGTH_GREAT;
+                else if (asu >= GSM_SIGNAL_STRENGTH_GOOD)  level = SIGNAL_STRENGTH_GOOD;
+                else if (asu >= GSM_SIGNAL_STRENGTH_MODERATE)  level = SIGNAL_STRENGTH_MODERATE;
+                else level = SIGNAL_STRENGTH_POOR;
+
+                signalStrengthValue= level;
+                Log.d("GSM","GSM Signal: " + signalStrengthValue);
+            } else {
+                Log.d("GSM","GSM Signal: " + signalStrengthValue);
+                signalStrengthValue = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;// signalStrength.getCdmaDbm();
+            }
+            int resourceType = getResources().getIdentifier("gsm_level_"+signalStrengthValue , "drawable", getPackageName());
+            imGsm.setImageResource(resourceType);
+//            Log.d("GSM","GSM Signal: " + signalStrengthValue);
+        }
+    }
 }

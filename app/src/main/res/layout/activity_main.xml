@@ -8,13 +8,37 @@
     tools:context="pl.rcponline.nfc.WelcomeActivity"
     >
 
-    <ImageView
-        android:id="@+id/im_synchronized_main"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:layout_alignParentRight="true"
-        android:src="@drawable/ic_action_refresh"
-        />
+        >
+        <ImageView
+            android:id="@+id/im_gsm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:src="@drawable/gsm_level_0"
+            />
+        <ImageView
+            android:id="@+id/im_wifi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:src="@drawable/wifi_level_0"
+            />
+        <ImageView
+            android:id="@+id/im_battery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:src="@drawable/battery_level_0"
+            />
+        <ImageView
+            android:id="@+id/im_synchronized_main"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:src="@drawable/ic_action_refresh"/>
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/ll_datatime"

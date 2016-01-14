@@ -224,4 +224,32 @@
             android:layout_below="@+id/event_buttons">
         </ListView>
     </LinearLayout>
+    <LinearLayout
+        android:id="@+id/ll_make_photo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/ll_event_comment"
+        android:gravity="right"
+        >
+        <SurfaceView
+            android:id="@+id/sv_camera_preview_1px"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            />
+        <SurfaceView
+            android:id="@+id/sv_camera_preview"
+            android:layout_width="225dp"
+            android:layout_height="300dp"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            />
+        <!--<ImageView-->
+            <!--android:id="@+id/iv_make_photo_preview"-->
+            <!--android:layout_width="150dp"-->
+            <!--android:layout_height="150dp"-->
+            <!--tools:src="@drawable/gsm_level_0"-->
+            <!--android:layout_gravity="bottom"/>-->
+    </LinearLayout>
 </RelativeLayout>

@@ -2,11 +2,11 @@ package pl.rcponline.nfc;
 
 public class Const {
 
-//    public static final String ENIVORMENT   = "/app_dev.php";
-    public static final String ENIVORMENT   = "";
+    public static final String ENIVORMENT   = "/app_dev.php";
+//    public static final String ENIVORMENT   = "";
 //    public static final String MAIN_URL     = "http://dev-panel.rcponline.pl";//
 //    public static final String MAIN_URL     = "http://panel.rcponline.pl";//
-    public static final String MAIN_URL     = "http://192.168.2.102";//rcp.lh  home
+    public static final String MAIN_URL     = "http://192.168.2.101";//rcp.lh  home
 //    public static final String MAIN_URL   = "http://192.168.1.107"; //biuro
 //    public static final String MAIN_URL   = "http://rcp.lh"; //mietka
     public static final String LOGIN_URL    = MAIN_URL+ENIVORMENT+"/apiNfc/loginNfc";
@@ -28,6 +28,11 @@ public class Const {
     public static final String DEVICE_CODE_API_KEY  = "device_code";
 
     public static final Integer SOURCE_ID           = 5;//reader-smartphone
+
+    //private static final String TAG = "SESSION_MANAGER";
+    public static final String PREF_NAME = "RCP_NFC_PREF_SESSION";
+    //SharedPreference Mode
+    public static int PREF_MODE = 0;
     public static final String PREF_LOGIN           = "pl.rcponline.nfc.login";
     public static final String PREF_PASS            = "pl.rcponline.nfc.password";
     public static final String PREF_IS_USER_LOGGED  = "pl.rcponline.nfc.is_user_logged";
@@ -40,6 +45,7 @@ public class Const {
     public static final String PREF_EMPLOYEE_LAST_EVENT_TYPE_ID = "pl.rcponline.nfc.employee_last_event_type_id";
     public static final String PREF_DEVICE_CODE     = "pl.rcponline.nfc.device_code";
 
+    public static final String PREF_IS_SYNCHRONISATION_NOW = "pl.rcponline.nfc.is_synchronisation_now";
 
     public static final Integer TIME_INTERVAL = 1000 * 60 * 2;
 

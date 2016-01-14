@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="pl.rcponline.nfc"
-    android:versionCode="1"
-    android:versionName="1.0" >
+    android:versionCode="11"
+    android:versionName="1.11" >
 
-    <uses-feature
-        android:name="android.hardware.nfc"
-        android:required="true" />
+    <uses-feature android:name="android.hardware.nfc" android:required="true" />
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
 
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <uses-permission android:name="android.intent.action.ACTION_BATTERY_LOW" />
+    <uses-permission android:name="android.intent.action.ACTION_BATTERY_OKAY" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
@@ -54,7 +65,24 @@
                 android:value="pl.rcponline.nfc.MainActivity" />
 
         </activity>
+        <activity
+            android:name=".EventActivity2"
+            android:configChanges="orientation"
+            android:label="@string/app_name"
+            android:parentActivityName=".MainActivity"
+            android:screenOrientation="sensorPortrait" >
 
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="pl.rcponline.nfc.MainActivity" />
+
+        </activity>
         <activity
             android:name=".LoginActivity"
             android:configChanges="orientation"
@@ -89,6 +117,12 @@
             </intent-filter>
         </receiver>
 
+        <!--<reciever android:name=".BatteryLevelReciever" >-->
+            <!--<intent-filter>-->
+                <!--<action android:name="android.intent.action.ACTION_BATTERY_LOW" />-->
+                <!--<action android:name="android.intent.action.ACTION_BATTERY_OKAY" />-->
+            <!--</intent-filter>-->
+        <!--</reciever>-->
 
     </application>
 

@@ -24,4 +24,21 @@
         android:summary="@string/settings_view_last_events_desc"
         android:defaultValue="true" />
 
+    <CheckBoxPreference
+        android:key="night_work"
+        android:title="@string/night_work"
+        android:summary="@string/night_work_summary"
+        android:defaultValue="true" />
+
+    <CheckBoxPreference
+        android:key="make_foto"
+        android:title="@string/make_foto"
+        android:summary="@string/make_foto_desc"
+        android:defaultValue="false" />
+
+    <CheckBoxPreference
+        android:key="make_foto_preview"
+        android:title="@string/make_foto_preview"
+        android:summary="@string/make_foto_preview_desc"
+        android:defaultValue="false" />
 </PreferenceScreen>

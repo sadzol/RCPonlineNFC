@@ -6,9 +6,17 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
+import android.media.ExifInterface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
@@ -16,7 +24,10 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewDebug;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -33,10 +44,25 @@ import com.androidquery.callback.AjaxStatus;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import android.location.Location;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Type;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -47,11 +73,11 @@ import pl.rcponline.nfc.dao.DAO;
 import pl.rcponline.nfc.dao.EventDAO;
 import pl.rcponline.nfc.model.Event;
 
-public class EventActivity extends Activity implements View.OnClickListener {
+public class EventActivity extends Activity implements View.OnClickListener ,ConnectionCallbacks, OnConnectionFailedListener, LocationListener, SurfaceHolder.Callback {
 
     private static final String TAG = "EVENT_ACTIVITY";
     AQuery aq;
-    String  comment, data;
+    String  comment, data, location;
     int isEventSend, typeId,lastEvenTypeId;
     View lasViewEvent;
     EditText etComment;
@@ -67,6 +93,28 @@ public class EventActivity extends Activity implements View.OnClickListener {
     ImageView imSynchro,ivStartOff,ivFinishOff,ivBreakOff,ivTempOff;
     LinearLayout llDatatime;
 
+    /////CAMERA//////
+    private SurfaceHolder surfaceHolder;
+    private SurfaceView svCameraPreview;
+    private Camera camera;
+//    SurfaceTexture surfaceTexture;
+//    SurfaceView view;
+
+    ///////////////LOCATION///////////////////////////////////////////////////////
+    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
+    private final static int REQUEST_CHECK_SETTINGS = 1001;
+    private Location mLastLocation;
+
+    // Google client to interact with Google API
+    private GoogleApiClient mGoogleApiClient;
+    private LocationRequest mLocationRequest;
+
+    // Location updates intervals in sec
+    private static int UPDATE_INTERVAL = 1000; // 1 sec
+    private static int FATEST_INTERVAL = 1000; // 1 sec
+    private static int DISPLACEMENT = 1; // 1 meters
+    ////////////////////////////////////////////////////////////////////////////////
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,10 +126,8 @@ public class EventActivity extends Activity implements View.OnClickListener {
         }
 
         //FULL SCREEN BEFORE setContetnView
-//        Toast.makeText(this,String.valueOf(session.getEmployeePermission()),Toast.LENGTH_SHORT).show();
         if(session.getEmployeePermission() < 1) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-//            requestWindowFeature(Window.FEATURE_NO_TITLE);
         }
         //END FULL SCREEN
 
@@ -91,7 +137,18 @@ public class EventActivity extends Activity implements View.OnClickListener {
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         context = this;
 
-        //Zegar w czasie rzeczywistym
+        ///////////LOC///////// First we need to check availability of play services
+        if (checkPlayServices()) {
+            // Building the GoogleApi client
+            Log.d(TAG,"checkPlayService - OK");
+            buildGoogleApiClient();
+            createLocationRequest();
+        }else{
+            Log.d(TAG,"checkPlayService - NO");
+        }
+        //////////////////////////////////////////////////
+
+//        Zegar w czasie rzeczywistym
 //        Runnable myRunnableThread = new CountDownRunner();
 //        Thread myThread = new Thread(myRunnableThread);
 //        myThread.start();
@@ -100,9 +157,9 @@ public class EventActivity extends Activity implements View.OnClickListener {
         aq = new AQuery(getApplicationContext());
 
         setTitle(session.getEmployeeName());
+
         //Wył. KLAWIATURE do czasu az pole tekstownie nie zostanie wybrane    (Disabled software keyboard in android until TextEdit is chosen)
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-
 
         //Inicjajca przyciskow
         btStart         = (ImageButton) findViewById(R.id.bt_start);
@@ -125,6 +182,12 @@ public class EventActivity extends Activity implements View.OnClickListener {
         rlBreak = (RelativeLayout) findViewById(R.id.ll_pause);
         rlPayExit= (RelativeLayout) findViewById(R.id.ll_record);
 
+        //Podglad kamerki
+//        svCameraPreview = (SurfaceView) findViewById(R.id.sv_camera_preview);
+
+//        surfaceTexture = new SurfaceTexture(10);
+//        view = new SurfaceView(this);
+
         btStart.setOnClickListener(this);
         btFinish.setOnClickListener(this);
         btBreakStart.setOnClickListener(this);
@@ -132,7 +195,6 @@ public class EventActivity extends Activity implements View.OnClickListener {
         btTempStart.setOnClickListener(this);
         btTempFinish.setOnClickListener(this);
         imSynchro.setOnClickListener(this);
-
 
         pd = new ProgressDialog(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog));
         pd.setCancelable(false);
@@ -144,12 +206,21 @@ public class EventActivity extends Activity implements View.OnClickListener {
 
     @Override
     protected void onStart() {
+
         super.onStart();
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.connect();
+        }
     }
+
 
     @Override
     protected void onStop() {
         super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            stopLocationUpdates();
+            mGoogleApiClient.disconnect();
+        }
         Log.d(TAG, "onStop");
     }
 
@@ -157,6 +228,14 @@ public class EventActivity extends Activity implements View.OnClickListener {
     //onResume po odwroceniu urzadzenia
     protected void onResume() {
         super.onResume();
+
+        // Resuming the periodic location updates
+        if (mGoogleApiClient.isConnected()){
+            //Toast.makeText(this,"StartLocationUpdates",Toast.LENGTH_SHORT).show();
+            startLocationUpdates();
+        }else{
+            //Toast.makeText(this,"NOstartLocationUpdates",Toast.LENGTH_SHORT).show();
+        }
 
         if(session.getEmployeeId() == 0 ){
             //powrot na strone akrywacji
@@ -192,6 +271,25 @@ public class EventActivity extends Activity implements View.OnClickListener {
         }else {
             rlPayExit.setVisibility(View.GONE);
         }
+
+        if(sp.getBoolean("make_foto",true)){
+
+            if (sp.getBoolean("make_foto_preview",true)){
+                svCameraPreview = (SurfaceView) findViewById(R.id.sv_camera_preview);
+            }else{
+                svCameraPreview = (SurfaceView) findViewById(R.id.sv_camera_preview_1px);
+            }
+            svCameraPreview.setVisibility(View.VISIBLE);
+
+            surfaceHolder = svCameraPreview.getHolder();
+            surfaceHolder.addCallback(this);
+        }else{
+            SurfaceView svCameraPreview1 = (SurfaceView) findViewById(R.id.sv_camera_preview);
+            SurfaceView svCameraPreview2 = (SurfaceView) findViewById(R.id.sv_camera_preview_1px);
+            svCameraPreview1.setVisibility(View.GONE);
+            svCameraPreview2.setVisibility(View.GONE);
+        }
+
     }
 
     @Override
@@ -299,12 +397,25 @@ public class EventActivity extends Activity implements View.OnClickListener {
     //To umiecic w EVENT.java-nie moge bo po wykonianu  aq.ajax nie bede mial wplywu na UI, a w mainActivity jest wpylyw na modyfikacje UI
     private boolean SendEvent() {
 
+        //SAVE PICTURE
+        if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("make_foto",true)){
+            camera.takePicture(null,null,picHandler);
+        }
+
+
         //TODO SPRAWDZIC CZY JEST polaczenie jesli nie to nie uruchamiac aq.ajax
         EditText etComment = (EditText)findViewById(R.id.et_event_comment);
         comment = etComment.getText().toString();
         String url = Const.ADD_EVENT_URL;
         data = getDateTime();
         isEventSend = 0;
+
+
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        location = getString(R.string.location_disabled);
+        if(mLastLocation != null) {
+            location = mLastLocation.getLatitude() + ";" + mLastLocation.getLongitude();
+        }
 
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
@@ -323,13 +434,14 @@ public class EventActivity extends Activity implements View.OnClickListener {
             params.put(Const.TYPE_ID_API_KEY, typeId);
             params.put(Const.SOURCE_ID_API_KEY, Const.SOURCE_ID);
             params.put(Const.DATATIME_API_KEY, data);
+            params.put(Const.LOCATION_API_KEY, location);
             params.put(Const.COMMENT_API_KEY, comment);
 
             params.put(Const.IDENTIFICATOR_API_KEY, session.getIdentificator());
             params.put(Const.EMPLOYEE_ID_API_KEY, session.getEmployeeId());
             params.put(Const.DEVICE_CODE_API_KEY, session.getDeviceCode());
 
-            Log.d(TAG, "API SEND: login="+session.getLogin()+", pass="+session.getPassword()+", typeId="+typeId+", sourceId="+Const.SOURCE_ID+", datatime="+data+", id="+session.getIdentificator()+", employeeId="+session.getEmployeeId()+", device_code="+session.getDeviceCode());
+            Log.d(TAG, "API SEND: login=" + session.getLogin() + ", pass=" + session.getPassword() + ", typeId=" + typeId + ", sourceId=" + Const.SOURCE_ID + ", datatime=" + data + ", id=" + session.getIdentificator() + ", employeeId=" + session.getEmployeeId() + ", device_code=" + session.getDeviceCode()+ ", location=" + location);
 
             ProgressDialog dialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_DARK);
             dialog.setIndeterminate(true);
@@ -338,6 +450,8 @@ public class EventActivity extends Activity implements View.OnClickListener {
             dialog.setCanceledOnTouchOutside(true);
             dialog.setMessage(getString(R.string.please_wait));
 
+//            Log.d(TAG, url);
+//            Log.d(TAG, params.toString());
             aq.progress(dialog).ajax(url, params, JSONObject.class, new AjaxCallback<JSONObject>() {
                 @Override
                 public void callback(String url, JSONObject json, AjaxStatus status) {
@@ -358,26 +472,23 @@ public class EventActivity extends Activity implements View.OnClickListener {
                     } else {
                         Log.i(TAG, "no json");
                         //message = "Error:" + getString(R.string.no_connection) + "( " + status.getCode() + " )";// + json.optString("login");
-                        error = "BLAD! Polaczenie: " + status.getMessage();
+
+                        //NIE POKAZUJEMY BLEDU JESLI SERVER NIE ODPOWIADA
+//                        error = "BLAD! Polaczenie: " + status.getMessage();
 //                        Toast.makeText(getApplicationContext(), getString(R.string.no_connection), Toast.LENGTH_LONG).show();
                     }
 
-                    saveEventToLocalDatabase(typeId, data, comment, isEventSend, error);
-
-                    //setButtons();
-                    //viewLastEvents();
+                    saveEventToLocalDatabase(typeId, data, location, comment, isEventSend, error);
                     goToMainActivityWithToast(error);
-//                    finish();
+
                 }
             });
 
         } else {
             //WYŁ. Internet z karty  DANE MOBILNE OFF
             Log.d(TAG, "INTERNET-OFF");
-            saveEventToLocalDatabase(typeId, data, comment,isEventSend,"");
+            saveEventToLocalDatabase(typeId, data, location, comment,isEventSend,"");
 
-            //setButtons();
-            //viewLastEvents();
             goToMainActivityWithToast(null);
 //            finish();
         }
@@ -386,6 +497,7 @@ public class EventActivity extends Activity implements View.OnClickListener {
     }
 
     private void goToMainActivityWithToast(String error){
+
         Intent intent = new Intent(getApplicationContext(),MainActivity.class);
         int resourceType = getResources().getIdentifier(String.valueOf(Const.EVENT_TYPE[typeId-1]), "string", getPackageName());
         String msg = context.getString(R.string.event_saved) + " " + context.getString(resourceType).toUpperCase();
@@ -393,18 +505,20 @@ public class EventActivity extends Activity implements View.OnClickListener {
         if(error != null){
             msg = error;
         }
-        intent.putExtra("event",msg );
+        intent.putExtra("event", msg);
         startActivity(intent);
         //finish();
     }
-    private void saveEventToLocalDatabase(int typeId,String data, String comment, int isEventSend, String error){
+
+    private void saveEventToLocalDatabase(int typeId,String data, String location, String comment, int isEventSend, String error){
         EventDAO eventDAO = new EventDAO(context);
-        eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, "", comment, isEventSend, session.getEmployeeId(),session.getDeviceCode() );
+        eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, location, comment, isEventSend, session.getEmployeeId(), session.getDeviceCode());
     }
 
     private void clearSessionEmplyeeData(){
         session.clearEmployee();
     }
+
     private String getDateTime() {
         SimpleDateFormat _format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String currentDataTimeStrong = _format.format(new Date());
@@ -492,6 +606,16 @@ public class EventActivity extends Activity implements View.OnClickListener {
         ivFinishOff.setVisibility(View.INVISIBLE);
         ivTempOff.setVisibility(View.INVISIBLE);
 
+        EventDAO eventDAO = new EventDAO(getApplicationContext());
+        Event event = eventDAO.getLastEventOfEmployee(session.getEmployeeId());
+
+
+        if(isCurrentButtonIsOk(event)){
+            session.setLastEventTypeId(event.getType());
+        }else{
+            session.setLastEventTypeId(6);
+        }
+        Log.d("EVENTID",String.valueOf(session.getLastEventTypeId()));
         switch (session.getLastEventTypeId()) {
             //FINISH
             case 6:
@@ -547,17 +671,15 @@ public class EventActivity extends Activity implements View.OnClickListener {
                 break;
             default:
 
-                btTempStart.setVisibility(View.VISIBLE);
-                btTempStart.setEnabled(true);
-                btBreakStart.setVisibility(View.VISIBLE);
-                btBreakStart.setEnabled(true);
-                btFinish.setVisibility(View.VISIBLE);
-                btFinish.setEnabled(true);
+                //DEFAULT CZYLI EVENT_ID 6 (koniec pracy)
+                btStart.setVisibility(View.VISIBLE);
+                btStart.setEnabled(true);
 
                 ivBreakOff.setVisibility(View.VISIBLE);
-                ivFinishOff.setVisibility(View.VISIBLE);
                 ivTempOff.setVisibility(View.VISIBLE);
-                llDatatime.setBackgroundResource(R.drawable.gradient_green);
+                ivFinishOff.setVisibility(View.VISIBLE);
+                llDatatime.setBackgroundResource(R.drawable.gradient_red);
+
                 break;
         }
     }
@@ -566,71 +688,172 @@ public class EventActivity extends Activity implements View.OnClickListener {
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if(cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected()) {
 
-            EventDAO eventDAO = new EventDAO(context);
-            List<Event> events = eventDAO.getEventsWithStatus(0);
+            SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+            SharedPreferences.Editor editor = pref.edit();
 
-            ProgressDialog dialog = new ProgressDialog(context,ProgressDialog.THEME_HOLO_DARK);
-            dialog.setIndeterminate(true);
-            dialog.setCancelable(true);
-            dialog.setInverseBackgroundForced(false);
-            dialog.setCanceledOnTouchOutside(true);
-            dialog.setMessage(context.getString(R.string.synchronized_with_server));
+            if(!session.getIsSynchroNow()) {
+                session.setIsSynchroNow(true);
 
-            //jeśli są to wysyłamy eventy ze statusem 0
-            Gson g = new Gson();
-            Type type = new TypeToken<List<Event>>() {}.getType();
-            String eventsString = g.toJson(events, type);
-            Log.d(TAG, eventsString);
-            HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
-            SessionManager session = new SessionManager(context);
+                EventDAO eventDAO = new EventDAO(context);
+                List<Event> events = eventDAO.getEventsWithStatus(0);
 
-            eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
-            eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
-            eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
-            Log.d(TAG, eventsJSONObject.toString());
+                ProgressDialog dialog = new ProgressDialog(context, ProgressDialog.THEME_HOLO_DARK);
+                dialog.setIndeterminate(true);
+                dialog.setCancelable(true);
+                dialog.setInverseBackgroundForced(false);
+                dialog.setCanceledOnTouchOutside(true);
+                dialog.setMessage(context.getString(R.string.synchronized_with_server));
 
-            AQuery aq = new AQuery(context);
-            String url = Const.ADD_EVENTS_URL;
-            aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
-                @Override
-                public void callback(String url, JSONObject json, AjaxStatus status) {
-                    String message = "";
+                //jeśli są to wysyłamy eventy ze statusem 0
+                Gson g = new Gson();
+                Type type = new TypeToken<List<Event>>() {
+                }.getType();
+                String eventsString = g.toJson(events, type);
+                Log.d(TAG, eventsString);
+                HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
+                final SessionManager session = new SessionManager(context);
 
-                    if (json != null) {
-                        if (json.optBoolean("success") == true) {
-                            DAO.saveAllDataFromServer(json, context);
+                eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
+                eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
+                eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
+                Log.d(TAG, eventsJSONObject.toString());
 
-                        }else{
-                            message = json.optString("message");
-                        }
-                    } else {
-                        //TODO co z tymi errorami zrobic???
-                        //Kiedy kod 500( Internal Server Error)
-                        if (status.getCode() == 500) {
-                            message = context.getString(R.string.error_500);
+                AQuery aq = new AQuery(context);
+                String url = Const.ADD_EVENTS_URL;
+                aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
+                    @Override
+                    public void callback(String url, JSONObject json, AjaxStatus status) {
+                        String message = "";
 
-                            //Błąd 404 (Not found)
-                        } else if (status.getCode() == 404) {
-                            message = context.getString(R.string.error_404);
+                        if (json != null) {
+                            if (json.optBoolean("success") == true) {
+                                Log.d(TAG, "success: true");
+                                DAO.saveAllDataFromServer(json, context);
 
-                            //500 lub 404
+                                viewLastEvents();
+                                setButtons();
+
+                            } else {
+                                Log.d(TAG, "success: false");
+                                message = json.optString("message");
+                            }
                         } else {
-                            message = context.getString(R.string.error_unexpected);
-                        }
-                    }
+                            Log.d(TAG, "success - no json");
+                            //TODO co z tymi errorami zrobic???
+                            //Kiedy kod 500( Internal Server Error)
+                            if (status.getCode() == 500) {
+                                message = context.getString(R.string.error_500);
 
-                    if(message != ""){
-                        Toast.makeText(getApplicationContext(),message,Toast.LENGTH_SHORT).show();
+                                //Błąd 404 (Not found)
+                            } else if (status.getCode() == 404) {
+                                message = context.getString(R.string.error_404);
+
+                                //500 lub 404
+                            } else {
+                                //Glownie serwer nie odpowiada
+//                            message = String.valueOf(status.getCode())+" "+context.getString(R.string.error_unexpected);
+                                message = context.getString(R.string.error_unexpected);
+                            }
+                        }
+
+                        if (message != "") {
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+                        }
+                        Log.i(TAG, message);
+
+                        session.setIsSynchroNow(false);
                     }
-                    Log.i(TAG, message);
-                }
-            });
-            setButtons();
-            viewLastEvents();
+                });
+            }
+//            setButtons();
+//            viewLastEvents();
         }else{
             Toast.makeText(this, getString(R.string.synchronized_off), Toast.LENGTH_LONG).show();
         }
     }
+
+    ///////////////////////////////////
+    /////////LOCATION//////////////////
+
+    /**
+     * Creating google api client object
+     */
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API).build();
+    }
+
+    /**
+     * Creating location request object
+     */
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest()
+                .setInterval(UPDATE_INTERVAL)
+                .setFastestInterval(FATEST_INTERVAL)
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setSmallestDisplacement(DISPLACEMENT);
+    }
+
+    /**
+     * Method to verify google play services on the device
+     */
+    private boolean checkPlayServices() {
+        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
+                GooglePlayServicesUtil.getErrorDialog(resultCode, this,PLAY_SERVICES_RESOLUTION_REQUEST).show();
+                Log.d(TAG, "checkPlayServices : ConnectionResult.FALSE: isUserRecoverableError :"+resultCode);
+            } else {
+                Log.d(TAG,"checkPlayServices: This device is not supported.");
+                Toast.makeText(getApplicationContext(), "This device is not supported.", Toast.LENGTH_LONG).show();
+                finish();
+            }
+            return false;
+
+        }else{
+            Log.d(TAG, "checkPlayServices: ConnectionResult.TRUE");
+            return true;
+        }
+    }
+    /**
+     * Starting the location updates
+     */
+    protected void startLocationUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+    }
+    /**
+     * Stopping location updates
+     */
+    protected void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+    }
+    /**
+     * Google api callback methods
+     */
+    @Override
+    public void onConnectionFailed(ConnectionResult result) {
+        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
+    }
+
+    @Override
+    public void onConnected(Bundle arg0) {
+        startLocationUpdates();
+    }
+
+    @Override
+    public void onConnectionSuspended(int arg0) {
+        //mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        // Assign the new location
+        mLastLocation = location;
+
+    }
+    //////END LOCATION //////////////////////////////////
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -650,5 +873,148 @@ public class EventActivity extends Activity implements View.OnClickListener {
         }
 
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * Jesli pracownik zapimni odbic wyjscie...
+     * Jesli mamy ustawiona prace w nocy  -> nie zmieniamy wyswietlania osatniego eventa
+     * Jesli mamy ustawiona prace dniowa  -> zmianiamy dostepnosc przycisku na PLAY
+     */
+    private boolean isCurrentButtonIsOk(Event event){
+
+        //Czy jest wg. event pracownika czy event jest pusty(nie ma go)
+        Log.d("BLAD",String.valueOf(event.getId()));
+        if(event.getId() != 0){
+
+            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+            if(sp.getBoolean("night_work",true)) {//nie wiem czemu odwrotnie
+
+                SimpleDateFormat _formatFrom = new SimpleDateFormat("yyyy-MM-dd");
+                SimpleDateFormat _formatTo = new SimpleDateFormat("yyyyMMdd");
+                String currentDate = _formatTo.format(new Date());
+
+                try {
+                    Date eventDate = _formatFrom.parse(event.getDatetime());
+                    String eventDateString = _formatTo.format(eventDate);
+
+                    if(eventDateString.compareTo(currentDate) < 0 ){
+//                        Log.d("BUTTON_", "event < now");
+                        return false;
+                    }else{
+//                        Log.d("BUTTON_", "event > now");
+                        return true;
+                    }
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                    return true;
+                }
+            }else{
+//                Log.d("BUTTON_", "NIGHT WORK TRUE- noc");
+                //praca nocna eventy zostaja zawsze jak sa
+                return true;
+            }
+
+        }else{
+            Log.d("BLAD","Nie ma eventa id=0");
+            return false;
+        }
+
+    }
+
+    ///////////////////////CAMERA/////////////////////////////
+    //CAMERA PREVIEW ?
+    Camera.PictureCallback picHandler = new Camera.PictureCallback() {
+        @Override
+        public void onPictureTaken(byte[] data, Camera camera) {
+            Calendar currentDate = Calendar.getInstance();
+            String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(currentDate.getTime());
+
+            String event = "";
+            int resourceType = getResources().getIdentifier(String.valueOf(Const.EVENT_TYPE[typeId - 1]), "string", getPackageName());
+            event =  context.getString(resourceType);
+
+            File pictureFile  = new File(Environment.getExternalStorageDirectory().getPath() + "/DCIM/Camera/"+timeStamp+" "+session.getEmployeeName()+" - "+event+".jpg");
+
+            try {
+
+                FileOutputStream fos = new FileOutputStream(pictureFile .toString());
+
+                //START OBROT ZDJECIA O 270 stopni
+                Bitmap realImage = BitmapFactory.decodeByteArray(data, 0, data.length);
+
+                ExifInterface exif=new ExifInterface(pictureFile.toString());
+//
+                Log.d("EXIF value", exif.getAttribute(ExifInterface.TAG_ORIENTATION));
+                if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("6")){
+                    Log.d(TAG,"6");
+                    realImage= rotate(realImage, 90);
+                } else if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("8")){
+                    Log.d(TAG,"8");
+                    realImage= rotate(realImage, 270);
+                } else if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("3")){
+                    Log.d(TAG,"3");
+                    realImage= rotate(realImage, 180);
+                } else if(exif.getAttribute(ExifInterface.TAG_ORIENTATION).equalsIgnoreCase("0")){
+                    Log.d(TAG,"0");//TO JEST WYBIERANE WHY???
+                    realImage= rotate(realImage, 270);
+                }
+
+                boolean bo = realImage.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                //END obrotu zdjecia
+
+                fos.write(data);
+                fos.close();
+                sendBroadcast(new Intent(
+                        Intent.ACTION_MEDIA_MOUNTED,
+                        Uri.parse("file://" + Environment.getExternalStorageDirectory().getPath()+"/DCIM/Camera/")));
+
+                Log.d(TAG,"Zapisano foto..." );
+//                Toast.makeText(EventActivity.this, "Zapisano foto", Toast.LENGTH_SHORT).show();
+            }catch (FileNotFoundException e){
+                Log.e(TAG, "Zdjecie sie nie zapisalo, FILE NO FOUND");
+            }catch (IOException e){
+                Log.e(TAG, "INNY BLAD");
+            }
+        }
+    };
+    public static Bitmap rotate(Bitmap bitmap, int degree) {
+        int w = bitmap.getWidth();
+        int h = bitmap.getHeight();
+
+        Matrix mtx = new Matrix();
+        mtx.postRotate(degree);
+
+        return Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, true);
+    }
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+            camera = Camera.open(1);
+            camera.setDisplayOrientation(90);
+            try{
+
+//                camera.setPreviewDisplay(view.getHolder());
+                camera.setPreviewDisplay(holder);
+                camera.startPreview();
+            }catch (IOException e){
+                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CREATED : " + e.getMessage());
+            };
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            try{
+//                camera.setPreviewDisplay(view.getHolder());
+                camera.setPreviewDisplay(holder);
+                camera.startPreview();
+            }catch (IOException e){
+                Log.e(TAG, "ERROR PODGLAD KAMERY - SURFACE CHANGED : " + e.getMessage());
+            }
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+            camera.stopPreview();
+            camera.release();
+            camera = null;
     }
 }

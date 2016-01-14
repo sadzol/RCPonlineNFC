@@ -10,6 +10,8 @@
     <string name="nfc_disabled">Wymaga uruchomienia NFC</string>
     <string name="action_settings">Settings</string>
     <string name="put_your_card">Przyłóż kartę</string>
+    <string name="night_work">Przycisk rozpoczęcia pracy</string>
+    <string name="night_work_summary">Aktywuj zawsze na początku dnia (pozwala uniknąć dodatkowych błędów rejestracji, jeśli nie została zakończona praca w dniu poprzednim)</string>
 
     <string name="event_work_start">Rozpoczęcie\npracy</string>
     <string name="event_break_start">Przerwa</string>
@@ -37,7 +39,7 @@
 
     <string name="login">Logowanie..</string>
     <string name="please_wait">Zapisywanie..</string>
-    <string name="searching">Wyszukiwanie...</string>
+    <string name="searching">Wyszukiwanie..</string>
     <string name="synchronized_with_server">Synchronizacja z serwerem...</string>
 
     <string name="bad_login_or_pass">Nieprawidłowy login lub hasło</string>
@@ -45,6 +47,7 @@
     <string name="error_500">Błąd 500: Serwer zajęty lub wyłączony</string>
     <string name="error_404">Błąd 404: Brak połączenia z serwerem</string>
     <string name="error_offline">Nie można się zalogować - sprawdź połączenie internetowe</string>
+    <string name="location_disabled">Brak informacji - wyłączona opcja lokalizacji w urządzeniu</string>
     <string name="synchronized_off">Synchronizacja nie jest możliwa - sprawdz połączenie internetowe</string>
 
     <string name="event_dialog_yes">Ponów</string>
@@ -62,6 +65,9 @@
     <string name="settings_view_last_events">Ostatnie zdarzenia</string>
     <string name="settings_view_last_events_desc">Włącz widoczność</string>
 
-
     <string name="hello_world">Hello world!</string>
+    <string name="make_foto">Rejestracja zdjęć</string>
+    <string name="make_foto_desc">Rób zdjęcia pracownikom przy rejestracji zdarzeń</string>
+    <string name="make_foto_preview">Podgląd zdjęcia</string>
+    <string name="make_foto_preview_desc">Włącz podgląd zdjęcia</string>
 </resources>
