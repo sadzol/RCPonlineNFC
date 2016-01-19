@@ -45,7 +45,7 @@ public class EventDAO {
         dbHelper.close();
     }
 
-    public Event createEvent(int typeId, int sourceId, String identificator, String datetime, String location, String comment, int status, long employeeId, String deviceCode){
+    public long createEvent(int typeId, int sourceId, String identificator, String datetime, String location, String comment, int status, long employeeId, String deviceCode){
 
         ContentValues values = new ContentValues();
         values.put(DBHelper.COLUMN_EVENT_TYPE_ID, typeId);
@@ -59,17 +59,21 @@ public class EventDAO {
         values.put(DBHelper.COLUMN_EVENT_DEVICE_CODE, deviceCode);
 
         long insertId = db.insert(DBHelper.TABLE_EVENT, null, values);
-        Cursor cursor = db.query(DBHelper.TABLE_EVENT,allColumn,null,null,null,null,null);
 
-        cursor.moveToFirst();
-        Event newEvent = cursorToEvent(cursor);
-        cursor.close();
-
-        return  newEvent;
+        //If we return Event
+//        Cursor cursor = db.query(DBHelper.TABLE_EVENT, allColumn, DBHelper.COLUMN_EVENT_ID + " = ?", new String[]{String.valueOf(insertId)}, null, null, "datetime DESC", "1");
+//
+//        Event newEvent;
+//        if(cursor.moveToFirst()) {
+//            newEvent = cursorToEvent(cursor);
+//        }
+//        cursor.close();
+//        return  newEvent;
+        return insertId;
 
     }
 
-    public Long insertEvent(Event event){
+    public long insertEvent(Event event){
 
         ContentValues values = new ContentValues();
         values.put(DBHelper.COLUMN_EVENT_TYPE_ID, event.getType());
@@ -84,6 +88,23 @@ public class EventDAO {
 
         long result = db.insert(DBHelper.TABLE_EVENT, null, values);
         return result;
+    }
+
+    public long updateEventStatus(long eventId, int status){
+
+        ContentValues values = new ContentValues();
+//        values.put(DBHelper.COLUMN_EVENT_TYPE_ID, event.getType());
+//        values.put(DBHelper.COLUMN_EVENT_SOURCE_ID, event.getSource());
+//        values.put(DBHelper.COLUMN_EVENT_IDENTIFICATOR, event.getIdentificator());
+//        values.put(DBHelper.COLUMN_EVENT_DATETIME, event.getDatetime());
+//        values.put(DBHelper.COLUMN_EVENT_LOCATION, event.getLocation());
+//        values.put(DBHelper.COLUMN_EVENT_COMMENT, event.getComment());
+        values.put(DBHelper.COLUMN_EVENT_STATUS, status);//event.getStatus());
+//        values.put(DBHelper.COLUMN_EVENT_EMPLOYEE_ID, event.getEmployee().getId());
+//        values.put(DBHelper.COLUMN_EVENT_DEVICE_CODE, event.getDeviceCode());
+
+        long result = db.update(DBHelper.TABLE_EVENT,values,DBHelper.COLUMN_EVENT_ID + " = " + eventId,null);
+        return  result;
     }
 
     //Domyslnie 6 ostatnich

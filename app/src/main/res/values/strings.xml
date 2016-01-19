@@ -35,6 +35,8 @@
     <string name="settings">Ustawienia</string>
     <string name="employes_list">Lista pracowników</string>
     <string name="device_code">Kod urządzenia</string>
+    <string name="version">Wersja oprogramowania</string>
+    <string name="info">Informacje</string>
     <string name="logout">Wyloguj</string>
 
     <string name="login">Logowanie..</string>

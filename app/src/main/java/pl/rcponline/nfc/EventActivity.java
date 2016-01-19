@@ -76,6 +76,8 @@ import pl.rcponline.nfc.model.Event;
 public class EventActivity extends Activity implements View.OnClickListener ,ConnectionCallbacks, OnConnectionFailedListener, LocationListener, SurfaceHolder.Callback {
 
     private static final String TAG = "EVENT_ACTIVITY";
+    private boolean oneEventTypeAtTime = true;
+
     AQuery aq;
     String  comment, data, location;
     int isEventSend, typeId,lastEvenTypeId;
@@ -83,11 +85,11 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
     EditText etComment;
     LinearLayout llLastEvent;
     RelativeLayout rlPayExit, rlBreak;
-
     // SESSION MANAGER CLASS
     SessionManager session;
-    ProgressDialog pd;
+    ProgressDialog pd,dialog;
     Context context;
+    long lastAddedEventId;
 
     ImageButton btStart, btFinish, btBreakStart, btBreakFinish, btTempStart, btTempFinish;
     ImageView imSynchro,ivStartOff,ivFinishOff,ivBreakOff,ivTempOff;
@@ -196,12 +198,18 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         btTempFinish.setOnClickListener(this);
         imSynchro.setOnClickListener(this);
 
-        pd = new ProgressDialog(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog));
-        pd.setCancelable(false);
-        pd.setIndeterminate(true);
-        pd.setTitle("");
-        pd.setMessage(getString(R.string.searching));
+//        pd = new ProgressDialog(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog));
+//        pd.setCancelable(false);
+//        pd.setIndeterminate(true);
+//        pd.setTitle("");
+//        pd.setMessage(getString(R.string.searching));
 
+        dialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_DARK);
+        dialog.setIndeterminate(true);
+        dialog.setCancelable(true);
+        dialog.setInverseBackgroundForced(false);
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.setMessage(getString(R.string.please_wait));
     }
 
     @Override
@@ -329,7 +337,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
                 startActivity(intent2);
                 return true;
 
-            case R.id.menu_device_code:
+            case R.id.menu_info:
                 FragmentManager manager = getFragmentManager();
                 DeviceCodeFragment dcf = new DeviceCodeFragment();
                 dcf.show(manager,"device_code");
@@ -396,12 +404,28 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
     //To umiecic w EVENT.java-nie moge bo po wykonianu  aq.ajax nie bede mial wplywu na UI, a w mainActivity jest wpylyw na modyfikacje UI
     private boolean SendEvent() {
+        //przeciwdziala kliknieciu 2x szybko na ten sam przycisk i zdublowaniu eventa do bazy
+        if(oneEventTypeAtTime == false)
+            return false;
 
+        oneEventTypeAtTime =  false;
+
+        dialog.show();
         //SAVE PICTURE
         if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean("make_foto",true)){
-            camera.takePicture(null,null,picHandler);
-        }
 
+            camera.takePicture(null,null,picHandler);
+            try {
+                Thread.sleep(100); // Pause of 1 Second
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                Log.d(TAG, e.toString());
+            }
+//            Runnable myRunnableThread = new Sleep();
+//            Thread myThread = new Thread(myRunnableThread);
+//            myThread.start();
+        }
 
         //TODO SPRAWDZIC CZY JEST polaczenie jesli nie to nie uruchamiac aq.ajax
         EditText etComment = (EditText)findViewById(R.id.et_event_comment);
@@ -410,12 +434,14 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         data = getDateTime();
         isEventSend = 0;
 
-
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         location = getString(R.string.location_disabled);
         if(mLastLocation != null) {
             location = mLastLocation.getLatitude() + ";" + mLastLocation.getLongitude();
         }
+
+        lastAddedEventId = saveEventToLocalDatabase(typeId, data, location, comment, isEventSend, "");
+        Log.d(TAG, "EVENT_ID:"+String.valueOf(lastAddedEventId));
 
         ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
@@ -441,25 +467,29 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             params.put(Const.EMPLOYEE_ID_API_KEY, session.getEmployeeId());
             params.put(Const.DEVICE_CODE_API_KEY, session.getDeviceCode());
 
-            Log.d(TAG, "API SEND: login=" + session.getLogin() + ", pass=" + session.getPassword() + ", typeId=" + typeId + ", sourceId=" + Const.SOURCE_ID + ", datatime=" + data + ", id=" + session.getIdentificator() + ", employeeId=" + session.getEmployeeId() + ", device_code=" + session.getDeviceCode()+ ", location=" + location);
+            Log.d(TAG, "API SEND: login=" + session.getLogin() + ", pass=" + session.getPassword() + ", typeId=" + typeId + ", sourceId=" + Const.SOURCE_ID + ", datatime=" + data + ", id=" + session.getIdentificator() + ", employeeId=" + session.getEmployeeId() + ", device_code=" + session.getDeviceCode() + ", location=" + location);
 
-            ProgressDialog dialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_DARK);
-            dialog.setIndeterminate(true);
-            dialog.setCancelable(true);
-            dialog.setInverseBackgroundForced(false);
-            dialog.setCanceledOnTouchOutside(true);
-            dialog.setMessage(getString(R.string.please_wait));
+//            ProgressDialog dialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_DARK);
+//            dialog.setIndeterminate(true);
+//            dialog.setCancelable(true);
+//            dialog.setInverseBackgroundForced(false);
+//            dialog.setCanceledOnTouchOutside(true);
+//            dialog.setMessage(getString(R.string.please_wait));
 
-//            Log.d(TAG, url);
-//            Log.d(TAG, params.toString());
-            aq.progress(dialog).ajax(url, params, JSONObject.class, new AjaxCallback<JSONObject>() {
+
+//            aq.progress(dialog).ajax(url, params, JSONObject.class, new AjaxCallback<JSONObject>() {
+            aq.ajax(url, params, JSONObject.class, new AjaxCallback<JSONObject>() {
                 @Override
                 public void callback(String url, JSONObject json, AjaxStatus status) {
                     String message, error = null;
                     if (json != null) {
                         if (json.optBoolean("success") == true) {
-                            Log.i(TAG, "Succes");
+                            Log.i(TAG, "Succes-true");
                             isEventSend = 1;
+                            EventDAO eventDAO = new EventDAO(context);
+//                            objLastEvent.setStatus(isEventSend);
+                            eventDAO.updateEventStatus(lastAddedEventId, isEventSend);
+
                             //message = "suc" + status.getCode() + json.toString() + json.optString("message");
 
                         } else {
@@ -477,9 +507,12 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 //                        error = "BLAD! Polaczenie: " + status.getMessage();
 //                        Toast.makeText(getApplicationContext(), getString(R.string.no_connection), Toast.LENGTH_LONG).show();
                     }
+                    if(error != null){
+                        Toast.makeText(getApplicationContext(), error, Toast.LENGTH_SHORT).show();
+                    }
 
-                    saveEventToLocalDatabase(typeId, data, location, comment, isEventSend, error);
-                    goToMainActivityWithToast(error);
+//                    saveEventToLocalDatabase(typeId, data, location, comment, isEventSend, error);
+//                    goToMainActivityWithToast(error);
 
                 }
             });
@@ -487,12 +520,12 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         } else {
             //WYŁ. Internet z karty  DANE MOBILNE OFF
             Log.d(TAG, "INTERNET-OFF");
-            saveEventToLocalDatabase(typeId, data, location, comment,isEventSend,"");
+//            saveEventToLocalDatabase(typeId, data, location, comment,isEventSend,"");
 
-            goToMainActivityWithToast(null);
+//            goToMainActivityWithToast(null);
 //            finish();
         }
-
+        goToMainActivityWithToast(null);
         return true;
     }
 
@@ -506,13 +539,16 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
             msg = error;
         }
         intent.putExtra("event", msg);
+
+        oneEventTypeAtTime = true;
         startActivity(intent);
         //finish();
     }
 
-    private void saveEventToLocalDatabase(int typeId,String data, String location, String comment, int isEventSend, String error){
+    private long saveEventToLocalDatabase(int typeId,String data, String location, String comment, int isEventSend, String error){
         EventDAO eventDAO = new EventDAO(context);
-        eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, location, comment, isEventSend, session.getEmployeeId(), session.getDeviceCode());
+        long eventId =  eventDAO.createEvent(typeId, Const.SOURCE_ID, session.getIdentificator(), data, location, comment, isEventSend, session.getEmployeeId(), session.getDeviceCode());
+        return eventId;
     }
 
     private void clearSessionEmplyeeData(){
@@ -688,8 +724,8 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if(cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected()) {
 
-            SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
-            SharedPreferences.Editor editor = pref.edit();
+//            SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+//            SharedPreferences.Editor editor = pref.edit();
 
             if(!session.getIsSynchroNow()) {
                 session.setIsSynchroNow(true);
@@ -762,6 +798,7 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
                         Log.i(TAG, message);
 
                         session.setIsSynchroNow(false);
+                        Log.d(TAG+"_SYNCH",String.valueOf(session.getIsSynchroNow()));
                     }
                 });
             }

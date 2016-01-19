@@ -24,8 +24,8 @@
                 android:orderInCategory="4"
                 android:showAsAction="ifRoom" />
             <item
-                android:id="@+id/menu_device_code"
-                android:title="@string/device_code"
+                android:id="@+id/menu_info"
+                android:title="@string/info"
                 android:orderInCategory="5"
                 android:showAsAction="ifRoom" />
             <item

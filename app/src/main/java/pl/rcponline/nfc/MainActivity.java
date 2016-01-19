@@ -7,6 +7,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
@@ -14,6 +16,8 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.support.v4.*;
+import android.support.v4.BuildConfig;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
@@ -101,7 +105,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
         setContentView(R.layout.activity_main);
         decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
         session = new SessionManager(getApplicationContext());
-        //session.logout();
+//        session.logout();
         if(session.checkLogin()){
             finish();
         }
@@ -130,6 +134,13 @@ public class MainActivity extends Activity implements View.OnClickListener{
             }
         }
 
+        try {
+            String versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+//        inflater = getActivity().getLayoutInflater();
 ////        //GSM
 //        imGsm     = (ImageView) findViewById(R.id.im_gsm);
 //        psListener = new myPhoneStateListener();
@@ -263,8 +274,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
         imBattery = (ImageView) findViewById(R.id.im_battery);
         registerReceiver(battery_receiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
-
-
         //END
         super.onResume();
 
@@ -275,6 +284,9 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
         //GSM SIGNAL
         telephonyManager.listen(psListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+
+        //Trzeba ustawic na false jakby gdzies sie nie ustawilo bo to moze zablokowac totalnie Synchornizacje
+        session.setIsSynchroNow(false);
     }
 
     @Override
@@ -380,9 +392,12 @@ public class MainActivity extends Activity implements View.OnClickListener{
     private void synchronizedWithServer(){
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if(cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected()) {
-
+//            session.setIsSynchroNow(false);
+//            Log.d("SYNCHRONIZACJA_MAIN_BEF",String.valueOf(session.getIsSynchroNow()));
             if(!session.getIsSynchroNow()) {
+//                Log.d("SYNCHRONIZACJA_MAIN","IN");
                 session.setIsSynchroNow(true);
+//                Log.d("SYNCHRONIZACJA_MAIN_IN", String.valueOf(session.getIsSynchroNow()));
 
                 EventDAO eventDAO = new EventDAO(context);
                 List<Event> events = eventDAO.getEventsWithStatus(0);
@@ -402,7 +417,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 Log.d(TAG, eventsString);
                 HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
 //            HashMap<String, Object> eventsJSONObject = new HashMap<>();
-                SessionManager session = new SessionManager(context);
+//                SessionManager session = new SessionManager(context);
 
                 eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
                 eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
@@ -419,6 +434,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
                         if (json != null) {
                             //zmienna succes moze byc albo true albo false
                             if (json.optBoolean("success") == true) {
+                                Log.d(TAG, "success: true");
                                 DAO.saveAllDataFromServer(json, context);
 
                             } else {
@@ -444,10 +460,13 @@ public class MainActivity extends Activity implements View.OnClickListener{
                         if (message != "") {
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
                         }
+
+                        session.setIsSynchroNow(false);
+                        Log.d(TAG + "_SYNCH", String.valueOf(session.getIsSynchroNow()));
                     }
                 });
 
-                session.setIsSynchroNow(false);
+
             }
         }else{
             Toast.makeText(this, getString(R.string.synchronized_off), Toast.LENGTH_LONG).show();

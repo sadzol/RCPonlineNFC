@@ -37,63 +37,63 @@ public class DAO {
 
     private static final String TAG = "DAO";
 
-    public static void synchronizedWithServer(final Context context) {
-
-        EventDAO eventDAO = new EventDAO(context);
-        List<Event> events = eventDAO.getEventsWithStatus(0);
-
-        ProgressDialog dialog = new ProgressDialog(context,ProgressDialog.THEME_HOLO_DARK);
-        dialog.setIndeterminate(true);
-        dialog.setCancelable(true);
-        dialog.setInverseBackgroundForced(false);
-        dialog.setCanceledOnTouchOutside(true);
-        dialog.setMessage(context.getString(R.string.synchronized_with_server));
-
-        //jesli sa to wysylamy eventy ze statusem 0
-        Gson g = new Gson();
-        Type type = new TypeToken<List<Event>>() {}.getType();
-        String eventsString = g.toJson(events, type);
-        Log.d(TAG, eventsString);
-        HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
-        SessionManager session = new SessionManager(context);
-
-        eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
-        eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
-        eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
-        Log.d(TAG, eventsJSONObject.toString());
-
-        AQuery aq = new AQuery(context);
-        String url = Const.ADD_EVENTS_URL;
-        aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
-            @Override
-            public void callback(String url, JSONObject json, AjaxStatus status) {
-                String message = "";
-
-                if (json != null) {
-                    if (json.optBoolean("success")) {
-                        DAO.saveAllDataFromServer(json, context);
-
-                    }
-                } else {
-                    //TODO co z tymi errorami zrobic???
-                    //Kiedy kod 500( Internal Server Error)
-                    if (status.getCode() == 500) {
-                        message = context.getString(R.string.error_500);
-
-                        //Blad 404 (Not found)
-                    } else if (status.getCode() == 404) {
-                        message = context.getString(R.string.error_404);
-
-                        //500 lub 404
-                    } else {
-                        message = context.getString(R.string.error_unexpected);
-                    }
-                }
-                Log.i(TAG, message);
-            }
-        });
-
-    }
+//    public static void synchronizedWithServer(final Context context) {
+//
+//        EventDAO eventDAO = new EventDAO(context);
+//        List<Event> events = eventDAO.getEventsWithStatus(0);
+//
+//        ProgressDialog dialog = new ProgressDialog(context,ProgressDialog.THEME_HOLO_DARK);
+//        dialog.setIndeterminate(true);
+//        dialog.setCancelable(true);
+//        dialog.setInverseBackgroundForced(false);
+//        dialog.setCanceledOnTouchOutside(true);
+//        dialog.setMessage(context.getString(R.string.synchronized_with_server));
+//
+//        //jesli sa to wysylamy eventy ze statusem 0
+//        Gson g = new Gson();
+//        Type type = new TypeToken<List<Event>>() {}.getType();
+//        String eventsString = g.toJson(events, type);
+//        Log.d(TAG, eventsString);
+//        HashMap<String, Object> eventsJSONObject = new HashMap<String, Object>();
+//        SessionManager session = new SessionManager(context);
+//
+//        eventsJSONObject.put(Const.LOGIN_API_KEY, session.getLogin());
+//        eventsJSONObject.put(Const.PASSWORD_API_KEY, session.getPassword());
+//        eventsJSONObject.put(Const.EVENTS_API_KEY, eventsString);
+//        Log.d(TAG, eventsJSONObject.toString());
+//
+//        AQuery aq = new AQuery(context);
+//        String url = Const.ADD_EVENTS_URL;
+//        aq.progress(dialog).ajax(url, eventsJSONObject, JSONObject.class, new AjaxCallback<JSONObject>() {
+//            @Override
+//            public void callback(String url, JSONObject json, AjaxStatus status) {
+//                String message = "";
+//
+//                if (json != null) {
+//                    if (json.optBoolean("success")) {
+//                        DAO.saveAllDataFromServer(json, context);
+//
+//                    }
+//                } else {
+//                    //TODO co z tymi errorami zrobic???
+//                    //Kiedy kod 500( Internal Server Error)
+//                    if (status.getCode() == 500) {
+//                        message = context.getString(R.string.error_500);
+//
+//                        //Blad 404 (Not found)
+//                    } else if (status.getCode() == 404) {
+//                        message = context.getString(R.string.error_404);
+//
+//                        //500 lub 404
+//                    } else {
+//                        message = context.getString(R.string.error_unexpected);
+//                    }
+//                }
+//                Log.i(TAG, message);
+//            }
+//        });
+//
+//    }
 
     public static void saveAllDataFromServer(JSONObject json, final Context context) {
         Gson gson = new Gson();
@@ -145,14 +145,19 @@ public class DAO {
                             idDAO.insertIdentificator(ident);
                         }
                     }
-                    JsonArray jsonArrayEvent = jsonEmp.get("events").getAsJsonArray();
-                    for (int k = 0; k < jsonArrayEvent.size(); k++) {
-                        Event event = gson.fromJson(jsonArrayEvent.get(k).getAsString(), Event.class);
+                    if (jsonEmp.get("events").isJsonArray()) {
+                        Log.d(TAG, "is events array");
+                        JsonArray jsonArrayEvent = jsonEmp.get("events").getAsJsonArray();
+                        for (int k = 0; k < jsonArrayEvent.size(); k++) {
+                            Event event = gson.fromJson(jsonArrayEvent.get(k).getAsString(), Event.class);
 
-                        if (event != null) {
-                            event.setEmployee(emp);
-                            eventDAO.insertEvent(event);
+                            if (event != null) {
+                                event.setEmployee(emp);
+                                eventDAO.insertEvent(event);
+                            }
                         }
+                    }else{
+                        Log.d(TAG,"is not events array");
                     }
                 }
 //                  Log.d(TAG,json.getString("data"));

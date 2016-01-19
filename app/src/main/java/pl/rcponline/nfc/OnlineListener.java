@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -39,12 +40,20 @@ public class OnlineListener extends BroadcastReceiver {
     private SharedPreferences.Editor editor;
 
     private void setIsSynchroNow(boolean isSynchro){
-        Log.d("SYNCHRO",String.valueOf(isSynchro));
+        Log.d("SYNCHRONIZACJA_ONLINE",String.valueOf(isSynchro));
         editor.putBoolean(Const.PREF_IS_SYNCHRONISATION_NOW, isSynchro);
         editor.apply();
     }
     private boolean getIsSynchroNow(){
         return pref.getBoolean(Const.PREF_IS_SYNCHRONISATION_NOW, false);
+    }
+    public boolean isOnline(Context context) {
+
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        //should check null because in air plan mode it will be null
+        return (netInfo != null && netInfo.isConnected());
+
     }
 
     @Override
@@ -74,18 +83,21 @@ public class OnlineListener extends BroadcastReceiver {
             Log.d(TAG, "ONLINE");
 
             //czy w tym samym czasie sie juz nie synchronizuje
+//            Log.d(TAG,"pref:synchro="+String.valueOf(getIsSynchroNow()));
             if(!getIsSynchroNow()){
                 setIsSynchroNow(true);
 
                 if (firstConnect) {
 
-                    Log.d(TAG, "First connection");
+//                    Log.d(TAG, "First connection");
                     EventDAO eventDAO = new EventDAO(context);
                     List<Event> events = eventDAO.getEventsWithStatus(0);
 
                     //jeśli nie ma niewysłanych eventów to konczymy
                     if (events.isEmpty()) {
                         Log.d(TAG, "NIE MA EVENTOW DO WYSLANIA");
+                        setIsSynchroNow(false);
+                        Log.d(TAG + "_SYNCH", String.valueOf(getIsSynchroNow()));
                         return;
                     } else {
                         Log.d(TAG, String.valueOf(events.size()));
@@ -144,13 +156,14 @@ public class OnlineListener extends BroadcastReceiver {
                             Log.i(TAG, message);
 
                             setIsSynchroNow(false);
+                            Log.d(TAG + "_SYNCH", String.valueOf(getIsSynchroNow()));
                         }
                     });
-                    firstConnect = false;
+//                    firstConnect = false;
                 }else{
                     Log.d(TAG,"Synchronizuje sie juz w tym czasie");
                 }
-
+                firstConnect = false;
             }else{
                 firstConnect = true;
 //                Log.d(TAG, "Next connection");

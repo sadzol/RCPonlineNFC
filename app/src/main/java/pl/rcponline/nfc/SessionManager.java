@@ -176,11 +176,14 @@ public class SessionManager {
 
 
     public void setIsSynchroNow(boolean isSynchro){
-        Log.d("SYNCHRO",String.valueOf(isSynchro));
+//        Log.d("SYNCHRONIZACJA_MAN_SET",String.valueOf(isSynchro));
         editor.putBoolean(Const.PREF_IS_SYNCHRONISATION_NOW, isSynchro);
         editor.apply();
     }
     public boolean getIsSynchroNow(){
-        return pref.getBoolean(Const.PREF_IS_SYNCHRONISATION_NOW, false);
+        boolean isSynchro = pref.getBoolean(Const.PREF_IS_SYNCHRONISATION_NOW, false);
+//        Log.d("SYNCHRONIZACJA_MAN_GET",String.valueOf(isSynchro));
+        return isSynchro;
+
     }
 }
