@@ -5,9 +5,9 @@ public class Const {
     public static final String ENIVORMENT   = "/app_dev.php";
 //    public static final String ENIVORMENT   = "";
 //    public static final String MAIN_URL     = "http://dev-panel.rcponline.pl";//
-    public static final String MAIN_URL     = "http://panel.rcponline.pl";//
-//    public static final String MAIN_URL     = "http://192.168.2.100";//rcp.lh  home
-//    public static final String MAIN_URL   = "http://192.168.1.107"; //biuro
+//    public static final String MAIN_URL     = "http://painel.rcponline.pl";//
+    public static final String MAIN_URL     = "http://192.168.2.100";//rcp.lh  home
+//    public static final String MAIN_URL   = "http://192.168.8.106"; //biuro
 //    public static final String MAIN_URL   = "http://rcp.lh"; //mietka
     public static final String LOGIN_URL    = MAIN_URL+ENIVORMENT+"/apiNfc/loginNfc";
     public static final String ADD_EVENT_URL  = MAIN_URL+ENIVORMENT+"/apiNfc/addEvent";

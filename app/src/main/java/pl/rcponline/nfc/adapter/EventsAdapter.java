@@ -2,6 +2,7 @@ package pl.rcponline.nfc.adapter;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -62,9 +63,12 @@ public class EventsAdapter  extends ArrayAdapter<Event>{
             TextView EventDesc  = (TextView) view.findViewById(R.id.tv_list_events_desc);
 
             if(e.getStatus() == 0){
+                Log.d(TAG, "Id-event:"+e.getId()+",Status:0");
                 EventTime.setTextColor(Color.GRAY);
                 EventName.setTextColor(Color.GRAY);
                 EventDesc.setTextColor(Color.GRAY);
+            }else{
+                Log.d(TAG, "Id-event:"+e.getId()+",Status:1");
             }
             if(EventTime != null){
                 EventTime.setText(getFormat(e.getDatetime()));

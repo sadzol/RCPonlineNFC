@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 
-
 public class DeviceCodeFragment extends DialogFragment {
 
     LayoutInflater inflater;
@@ -19,20 +18,8 @@ public class DeviceCodeFragment extends DialogFragment {
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
+        String versionName = BuildConfig.VERSION_NAME;
 
-//        PackageInfo pInfo = null;
-//        try {
-//            pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-//        } catch (PackageManager.NameNotFoundException e) {
-//            e.printStackTrace();
-//        }
-////        if(pInfo != null){
-//            String version = pInfo.versionName;
-            String versionName = BuildConfig.VERSION_NAME;
-//            Log.d(TAG,"VERSION: "+version);
-//            Log.d(TAG,"VERSION: "+versionName);
-
-//        }
         // Use the Builder class for convenient dialog construction
         SessionManager session = new SessionManager(getActivity());
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
