@@ -502,8 +502,12 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
                     } else {
                         Log.i(TAG, "no json");
                         //message = "Error:" + getString(R.string.no_connection) + "( " + status.getCode() + " )";// + json.optString("login");
-
+                        message = String.valueOf(status.getCode())+" "+context.getString(R.string.error_unexpected);
+                        Log.d(TAG,message);
+                        //-101 to chyba ten problem
+                        //TODO Jesli -101 to ostani event status=2  ale co jesl pojawi sie kolejny event pracowniki a odpowiedz z poprzedniego przyjdzie dopiero po minutcie to wezmie ten 2 event.... hmm
                         //NIE POKAZUJEMY BLEDU JESLI SERVER NIE ODPOWIADA
+
 //                        error = "BLAD! Polaczenie: " + status.getMessage();
 //                        Toast.makeText(getApplicationContext(), getString(R.string.no_connection), Toast.LENGTH_LONG).show();
                     }
@@ -786,16 +790,17 @@ public class EventActivity extends Activity implements View.OnClickListener ,Con
 
                                 //500 lub 404
                             } else {
+
                                 //Glownie serwer nie odpowiada
 //                            message = String.valueOf(status.getCode())+" "+context.getString(R.string.error_unexpected);
-                                message = context.getString(R.string.error_unexpected);
+//                                message = context.getString(R.string.error_unexpected);
                             }
                         }
 
                         if (message != "") {
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
                         }
-                        Log.i(TAG, message);
+                        Log.d(TAG, message);
 
                         session.setIsSynchroNow(false);
                         Log.d(TAG+"_SYNCH",String.valueOf(session.getIsSynchroNow()));
